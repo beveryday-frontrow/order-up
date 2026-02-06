@@ -143,6 +143,9 @@
       top: 0;
       z-index: 1;
     }
+    /* Column widths for Orders on the Grill table */
+    th:first-child, td:first-child { width: 80px; max-width: 100px; }
+    th:nth-child(2), td:nth-child(2) { width: 45%; min-width: 300px; }
     tbody tr {
       transition: background 0.1s;
     }
@@ -196,6 +199,31 @@
       color: var(--text-dim);
       font-size: 0.75rem;
       font-weight: 400;
+    }
+    /* Mario coin bounce animation for live updates */
+    @keyframes coin-bounce {
+      0% { transform: translateY(0) scale(1); }
+      15% { transform: translateY(-12px) scale(1.15); }
+      30% { transform: translateY(-20px) scale(1.2); }
+      45% { transform: translateY(-12px) scale(1.15); }
+      60% { transform: translateY(0) scale(1); }
+      75% { transform: translateY(-6px) scale(1.05); }
+      90% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    @keyframes coin-sparkle {
+      0%, 100% { box-shadow: 0 0 0 rgba(255, 215, 0, 0); }
+      25% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4); }
+      50% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.3); }
+      75% { box-shadow: 0 0 4px rgba(255, 215, 0, 0.4); }
+    }
+    .coin-bounce {
+      animation: coin-bounce 0.5s ease-out, coin-sparkle 0.5s ease-out;
+    }
+    /* Unresolved comments bounce with red tint */
+    .coin-bounce-comments {
+      animation: coin-bounce 0.5s ease-out;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
     }
     .comments-unresolved {
       color: var(--warning);
@@ -368,9 +396,13 @@
     .initiative-with-icon { display: inline-flex; align-items: center; gap: 0.375rem; }
     .initiative-icon { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; border-radius: 8px; flex-shrink: 0; }
     .pr-cell { display: inline-flex; align-items: center; white-space: nowrap; gap: 0.25rem; }
-    .row-refresh { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; font-size: 1rem; line-height: 1; border-radius: 4px; display: inline-flex; align-items: center; }
+    .row-refresh { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.15rem 0.3rem; border-radius: 4px; display: inline-flex; align-items: center; }
     .row-refresh:hover { color: var(--accent); background: var(--surface-hover); }
     .row-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row-refresh svg { width: 14px; height: 14px; }
+    .fork-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.15rem 0.3rem; border-radius: 4px; display: inline-flex; align-items: center; }
+    .fork-btn:hover { color: #a855f7; background: var(--surface-hover); }
+    .fork-btn svg { width: 14px; height: 14px; }
     .row-merge-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.35rem; vertical-align: middle; }
     .row-merge-btn:disabled { opacity: 0.7; cursor: not-allowed; }
     .repo-cell { display: block; }
@@ -424,6 +456,7 @@
       height: 16px;
     }
     .title-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pr-title { color: var(--text-muted); font-size: 0.8rem; display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .loading, .error { padding: 1.25rem; color: var(--text-muted); }
     /* Platformer loading stage (Burger Time style) */
     .loading-stage {
@@ -509,12 +542,7 @@
       animation: food-scroll 5s linear infinite;
       image-rendering: auto;
     }
-    .loading-stage__food:nth-child(1) { animation-delay: 0s; }
-    .loading-stage__food:nth-child(2) { animation-delay: 0.85s; }
-    .loading-stage__food:nth-child(3) { animation-delay: 1.7s; }
-    .loading-stage__food:nth-child(4) { animation-delay: 2.55s; }
-    .loading-stage__food:nth-child(5) { animation-delay: 3.4s; }
-    .loading-stage__food:nth-child(6) { animation-delay: 4.25s; }
+    /* Animation delays are set dynamically via inline styles */
     @keyframes food-scroll {
       0% { transform: translateX(0); }
       100% { transform: translateX(-120vw); }
@@ -688,7 +716,7 @@
     .chef-animations__item[data-frames="1"] .frame-btns { display: none; }
     .chef-anim-tweak .chef-align-all-btn { padding: 0.2rem 0.5rem; font-size: 0.6875rem; }
     .error { color: var(--danger); }
-    /* FINISH HIM button and flamethrower animation */
+    /* 86 THE BUGS button and flamethrower animation */
     .finish-him-btn {
       padding: 0.2rem 0.5rem;
       font-size: 0.65rem;
@@ -719,6 +747,73 @@
       0% { box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
       100% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.9); }
     }
+    /* CALL THE CHEF button - shown when PR is ready for review */
+    .review-now-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      margin-left: 0.25rem;
+    }
+    .review-now-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    }
+    /* MERGE button - shown when PR is approved and ready to merge */
+    .merge-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+      white-space: nowrap;
+      margin-left: 0.25rem;
+    }
+    .merge-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+    }
+    /* Row loading overlay */
+    .row-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(30, 30, 30, 0.6);
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .row-loading-overlay::after {
+      content: '↻';
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin { animation: spin 1s linear infinite; }
     /* Flamethrower overlay on row */
     .flamethrower-overlay {
       position: absolute;
@@ -1734,13 +1829,8 @@
       <div class="card loading-card">
         <div class="loading-stage" aria-hidden="true">
           <p class="loading-stage__title">Checking the kitchen…</p>
-          <div class="loading-stage__food-track">
-            <img src="/images/initiatives/burger.png" alt="" class="loading-stage__food" />
-            <img src="/images/initiatives/fries.png" alt="" class="loading-stage__food" />
-            <img src="/images/initiatives/cola.png" alt="" class="loading-stage__food" />
-            <img src="/images/initiatives/milkshake.png" alt="" class="loading-stage__food" />
-            <img src="/images/initiatives/nuggies.png" alt="" class="loading-stage__food" />
-            <img src="/images/initiatives/sauce.png" alt="" class="loading-stage__food" />
+          <div class="loading-stage__food-track" id="loading-food-track">
+            <!-- Food items populated dynamically from initiatives -->
           </div>
           <div class="loading-stage__chef" role="img" aria-hidden="true"></div>
           <div class="loading-stage__ground"></div>
@@ -1808,17 +1898,17 @@
       return 'https://github.com/' + repo + '/pull/' + number;
     }
 
-    /** Build copyable prompt for Cursor: @handle-pr-checks or @handle-pr-comments with PR number, link, and specific context. */
+    /** Build copyable prompt for Cursor: /handle-pr-checks or /handle-pr-comments with PR number, link, and specific context. */
     function buildCopyText(repo, number, kind, context) {
       if (!repo || !number) return '';
       var link = prLink(repo, number);
       if (kind === 'comments') {
         var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
-        return 'Use @handle-pr-comments for PR #' + number + countText + ': ' + link;
+        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link;
       }
       // For checks, include which check category is failing
       var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
-      return 'Use @handle-pr-checks for PR #' + number + checkText + ': ' + link;
+      return 'Use /handle-pr-checks for PR #' + number + checkText + ': ' + link;
     }
 
     /** Build rebase command for resolving conflicts */
@@ -1996,7 +2086,7 @@
         initCell = icon ? '<span class="initiative-with-icon">' + icon + initLink + '</span>' : initLink;
       }
       var commentsContent = pr.unresolved > 0
-        ? '<span class="comments-unresolved">' + pr.unresolved + ' <i data-lucide="message-square-warning"></i></span>'
+        ? '<span class="comments-unresolved">' + pr.unresolved + '</span>'
         : '<span class="check-icon none">0</span>';
       var commentsHtml = (path && path.trim())
         ? '<a href="cursor://file/' + escapeAttr(path) + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="Open in Cursor">' + commentsContent + '</a>'
@@ -2009,11 +2099,27 @@
       if (c.test === 'failure') failingChecks.push('test');
       if (c.e2e === 'failure') failingChecks.push('e2e');
       if (c.other === 'failure') failingChecks.push('other');
-      var finishBtn = hasIssues ? '<button type="button" class="finish-him-btn" title="Copy command to fix all issues" data-failing-checks="' + escapeAttr(failingChecks.join(',')) + '" data-unresolved="' + (pr.unresolved || 0) + '" data-has-conflicts="' + (hasConflicts(pr) ? '1' : '0') + '">FINISH HIM</button>' : '';
-      var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a><button type="button" class="row-refresh" title="Refresh this PR">↻</button>' + finishBtn + '</span>';
+      var finishBtn = hasIssues ? '<button type="button" class="finish-him-btn" title="Copy command to fix all issues" data-failing-checks="' + escapeAttr(failingChecks.join(',')) + '" data-unresolved="' + (pr.unresolved || 0) + '" data-has-conflicts="' + (hasConflicts(pr) ? '1' : '0') + '">86 THE BUGS</button>' : '';
+      // Show REVIEW NOW or MERGE button depending on approval status
+      var allChecksPassing = c.lint !== 'failure' && c.type !== 'failure' && c.test !== 'failure' && c.e2e !== 'failure' && c.other !== 'failure';
+      var readyForReview = !hasIssues && allChecksPassing && pr.mergeable !== false;
+      var isApproved = pr.reviewDecision === 'APPROVED';
+      // Debug: log button decision for this PR
+      if (readyForReview) {
+        console.log('PR #' + pr.number + ' readyForReview:', readyForReview, 'isApproved:', isApproved, 'reviewDecision:', pr.reviewDecision);
+      }
+      var reviewBtn = '';
+      if (readyForReview && isApproved) {
+        // PR is approved - show MERGE button
+        reviewBtn = '<button type="button" class="merge-btn" title="Merge this PR" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '">SERVE IT</button>';
+      } else if (readyForReview) {
+        // PR needs review - show REVIEW NOW button
+        reviewBtn = '<button type="button" class="review-now-btn" title="Copy review request message" data-title="' + escapeAttr(pr.title || '') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '">CALL THE CHEF</button>';
+      }
+      var forkBtn = path ? '<button type="button" class="fork-btn" title="Open in Fork" data-path="' + escapeAttr(path) + '"><i data-lucide="git-branch"></i></button>' : '';
+      var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + finishBtn + reviewBtn + '</span>';
       var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path) : '';
       var checksHtml = '<div class="checks-container">' +
-        '<span class="check-icon-wrap">' + mergeCell(pr.mergeable, pr.mergeStateStatus) + (pr.mergeable === true ? ' <button type="button" class="btn btn-primary row-merge-btn" title="Merge this PR">Merge</button>' : '') + '</span>' +
         '<span class="check-icon-wrap">' + checkCell(c.lint, path, pr.repo, pr.number, 'lint') + '</span>' +
         '<span class="check-icon-wrap">' + checkCell(c.type, path, pr.repo, pr.number, 'type') + '</span>' +
         '<span class="check-icon-wrap">' + checkCell(c.test, path, pr.repo, pr.number, 'test') + '</span>' +
@@ -2021,13 +2127,12 @@
         '<span class="check-icon-wrap">' + checkCell(c.other, path, pr.repo, pr.number, 'other') + '</span>' +
         conflictsBanner +
         '</div>';
+      var titleDisplay = '<span class="pr-title" title="' + escapeAttr(pr.title) + '">' + escapeHtml(pr.title.slice(0, 60)) + (pr.title.length > 60 ? '…' : '') + '</span>';
       return '<td>' + initCell + '</td>' +
-        '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + (pr.branch ? '<br><code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '</span></td>' +
-        '<td>' + prCell + '</td>' +
-        '<td class="title-cell"><span title="' + escapeAttr(pr.title) + '">' + escapeHtml(pr.title.slice(0, 55)) + (pr.title.length > 55 ? '…' : '') + '</span></td>' +
-        '<td class="checks-cell" colspan="6">' + checksHtml + '</td>' +
-        '<td>' + previewLinks(pr.previews) + '</td>' +
-        '<td>' + commentsHtml + '</td>';
+        '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? '<br><code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
+        '<td>' + commentsHtml + '</td>' +
+        '<td class="checks-cell" colspan="5">' + checksHtml + '</td>' +
+        '<td>' + previewLinks(pr.previews) + '</td>';
     }
 
     function sortInitiativesByOrder(initiatives) {
@@ -2135,13 +2240,24 @@
 
     function render(data, newlyCreatedName) {
       renderInitiativeCards(data.allInitiatives || [], newlyCreatedName);
-      // Populate available initiative names for the picker dropdown (exclude "—")
+      // Populate available initiative names for the picker dropdown
+      // Only show initiatives that DON'T have any open PRs
       availableInitiativeNames = [];
+      var initiativesWithPRs = new Set();
       if (data.initiatives) {
         for (var i = 0; i < data.initiatives.length; i++) {
           var initName = data.initiatives[i].name;
           if (initName && initName !== '—') {
-            availableInitiativeNames.push(initName);
+            initiativesWithPRs.add(initName.toLowerCase());
+          }
+        }
+      }
+      // Add all initiatives that don't have PRs
+      if (data.allInitiatives) {
+        for (var i = 0; i < data.allInitiatives.length; i++) {
+          var name = data.allInitiatives[i].name;
+          if (name && !initiativesWithPRs.has(name.toLowerCase())) {
+            availableInitiativeNames.push(name);
           }
         }
       }
@@ -2163,7 +2279,7 @@
         if (p.storybook) parts.push('<a href="' + escapeAttr(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
         return '<div class="preview-links">' + parts.join('') + '</div>';
       }
-      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo</th><th>PR</th><th>Title</th><th colspan="6" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Merge status"><i data-lucide="git-merge"></i></span><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th></tr></thead><tbody>';
+      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo / PR</th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th><th colspan="5" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th></tr></thead><tbody>';
       // Sort initiatives by saved order (same as cards)
       var sortedTableInitiatives = sortInitiativesByOrder(data.initiatives);
       for (const init of sortedTableInitiatives) {
@@ -2180,7 +2296,7 @@
           var focusInput = init.name !== '—' 
             ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(init.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
             : '';
-          html += '<tr class="initiative-group-header" data-initiative="' + escapeHtml(init.name) + '"><td colspan="12"><div>' + groupCell + focusInput + '</div></td></tr>';
+          html += '<tr class="initiative-group-header" data-initiative="' + escapeHtml(init.name) + '"><td colspan="9"><div>' + groupCell + focusInput + '</div></td></tr>';
         }
         var sortedPrs = sortPrsByPlatform(filteredPrs);
         for (const pr of sortedPrs) {
@@ -2387,6 +2503,31 @@
       });
     }
     var loadingGameState = { chefY: 0, chefVy: 0, lastFrameTime: 0, state: 'playing', deathStartTime: 0, respawnAt: 0, invincibleUntil: 0 };
+    
+    // Build food items HTML for loading game from all initiatives
+    function buildLoadingFoodItems() {
+      var initiatives = cachedInitiatives || [];
+      // Default fallback if no cached initiatives
+      if (initiatives.length === 0) {
+        initiatives = [
+          { name: 'burger' }, { name: 'fries' }, { name: 'cola' },
+          { name: 'milkshake' }, { name: 'nuggies' }, { name: 'sauce' }
+        ];
+      }
+      var html = '';
+      var delay = 0;
+      var delayStep = 0.7; // seconds between each food item
+      for (var i = 0; i < initiatives.length; i++) {
+        var name = initiatives[i].name || initiatives[i];
+        html += '<img src="/images/initiatives/' + escapeAttr(name) + '.png" alt="" class="loading-stage__food" style="animation-delay: ' + delay.toFixed(2) + 's;" />';
+        delay += delayStep;
+      }
+      return html;
+    }
+    
+    function buildLoadingStageHtml() {
+      return '<div class="card loading-card"><div class="loading-stage" aria-hidden="true"><p class="loading-stage__title">Checking the kitchen…</p><div class="loading-stage__food-track">' + buildLoadingFoodItems() + '</div><div class="loading-stage__chef" role="img" aria-hidden="true"></div><div class="loading-stage__ground"></div><span class="loading-stage__hint"><kbd>W</kbd> to jump</span></div></div>';
+    }
     function initLoadingGame() {
       var chef = document.querySelector('.loading-stage__chef');
       if (!chef) return;
@@ -2486,7 +2627,7 @@
       if (cachedInitiatives && cachedInitiatives.length > 0) {
         renderInitiativeCards(cachedInitiatives, null, true);
       }
-      root.innerHTML = '<div class="card loading-card"><div class="loading-stage" aria-hidden="true"><p class="loading-stage__title">Checking the kitchen…</p><div class="loading-stage__food-track"><img src="/images/initiatives/burger.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/fries.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/cola.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/milkshake.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/nuggies.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/sauce.png" alt="" class="loading-stage__food" /></div><div class="loading-stage__chef" role="img" aria-hidden="true"></div><div class="loading-stage__ground"></div><span class="loading-stage__hint"><kbd>W</kbd> to jump</span></div></div>';
+      root.innerHTML = buildLoadingStageHtml();
       initLoadingGame();
       refreshBtn.disabled = true;
       refreshBtn.textContent = 'Refreshing…';
@@ -2503,7 +2644,8 @@
     }
 
     const eventsList = document.getElementById('events-list');
-    const EVENTS_POLL_MS = 45000;
+    const EVENTS_POLL_MS = 30000; // Poll every 30 seconds
+    const PR_REFRESH_POLL_MS = 30000; // Auto-refresh PR data every 30 seconds
 
     function renderEvents(data) {
       if (!eventsList) return;
@@ -2530,6 +2672,9 @@
       }).join('');
     }
 
+    // Track last seen event timestamps per PR to detect new events
+    var lastSeenEventTimestamps = {};
+    
     async function loadEvents() {
       if (!eventsList) return;
       try {
@@ -2541,8 +2686,87 @@
         }
         const data = await r.json();
         renderEvents(data);
+        
+        // Check for new events and refresh affected PRs
+        if (data.events && data.events.length > 0) {
+          var prsToRefresh = new Set();
+          
+          for (var i = 0; i < data.events.length; i++) {
+            var evt = data.events[i];
+            var prKey = evt.repo + '#' + evt.number;
+            var eventTime = new Date(evt.created_at).getTime();
+            
+            // If we haven't seen this PR before, or this event is newer
+            if (!lastSeenEventTimestamps[prKey] || eventTime > lastSeenEventTimestamps[prKey]) {
+              // Only refresh if we had a previous timestamp (skip first load)
+              if (lastSeenEventTimestamps[prKey]) {
+                prsToRefresh.add(prKey);
+              }
+              lastSeenEventTimestamps[prKey] = eventTime;
+            }
+          }
+          
+          // Refresh PRs that have new events
+          prsToRefresh.forEach(function(prKey) {
+            var parts = prKey.split('#');
+            var repo = parts[0];
+            var num = parts[1];
+            refreshPrRowWithAnimation(repo, num);
+          });
+        }
       } catch (e) {
         renderEvents({ error: e.message });
+      }
+    }
+    
+    // Refresh a single PR row and apply coin animation
+    async function refreshPrRowWithAnimation(repo, num) {
+      var row = document.querySelector('tr[data-repo="' + repo + '"][data-number="' + num + '"]');
+      if (!row) return;
+      
+      try {
+        var r = await fetch('/api/pr?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num));
+        var data = await r.json();
+        if (data.pr) {
+          row.innerHTML = buildPrRowCells(data.pr);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          
+          // Apply Mario coin bounce animation to check icons
+          var checkIcons = row.querySelectorAll('.check-icon');
+          checkIcons.forEach(function(icon) {
+            icon.classList.add('coin-bounce');
+            setTimeout(function() {
+              icon.classList.remove('coin-bounce');
+            }, 600);
+          });
+          
+          // Apply bounce to unresolved comments with special style
+          var commentsEl = row.querySelector('.comments-unresolved');
+          if (commentsEl) {
+            commentsEl.classList.add('coin-bounce-comments');
+            setTimeout(function() {
+              commentsEl.classList.remove('coin-bounce-comments');
+            }, 600);
+          }
+          
+          // Flash the row background briefly
+          row.style.transition = 'background-color 0.3s';
+          row.style.backgroundColor = 'rgba(255, 215, 0, 0.15)';
+          setTimeout(function() {
+            row.style.backgroundColor = '';
+          }, 1500);
+          
+          // Update conflicts attribute
+          if (hasConflicts(data.pr)) {
+            row.setAttribute('data-has-conflicts', 'true');
+          } else {
+            row.removeAttribute('data-has-conflicts');
+          }
+          
+          showToast('PR #' + num + ' updated');
+        }
+      } catch (e) {
+        console.error('Failed to refresh PR:', repo, num, e);
       }
     }
 
@@ -3147,10 +3371,10 @@
         var issuesSummary = issues.length > 0 ? ' (' + issues.join('; ') + ')' : '';
         var cmd = 'Fix all issues on PR #' + num + issuesSummary + ': ' + link;
         if (failingChecks.length > 0) {
-          cmd += '\n\nUse @handle-pr-checks to fix the failing ' + failingChecks.join(', ') + ' check' + (failingChecks.length > 1 ? 's' : '') + '.';
+          cmd += '\n\nUse /handle-pr-checks to fix the failing ' + failingChecks.join(', ') + ' check' + (failingChecks.length > 1 ? 's' : '') + '.';
         }
         if (unresolved > 0) {
-          cmd += '\n\nUse @handle-pr-comments to address the ' + unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : '') + '.';
+          cmd += '\n\nUse /handle-pr-comments to address the ' + unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : '') + '.';
         }
         if (hasConflictsFlag) {
           cmd += '\n\nResolve merge conflicts with: git fetch origin && git rebase origin/main';
@@ -3160,13 +3384,103 @@
         copyCommand(cmd, 'All issues command copied!');
         finishBtn.textContent = 'COPIED!';
         setTimeout(function() {
-          finishBtn.textContent = 'FINISH HIM';
+          finishBtn.textContent = '86 THE BUGS';
         }, 1500);
         
         // Open in Cursor if path available
         if (path && path.trim()) {
           window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
         }
+        return;
+      }
+      // REVIEW NOW button handler - copies review request message
+      var reviewBtn = e.target && e.target.closest ? e.target.closest('button.review-now-btn') : null;
+      if (reviewBtn) {
+        var prTitle = reviewBtn.getAttribute('data-title') || '';
+        var repo = reviewBtn.getAttribute('data-repo') || '';
+        var num = reviewBtn.getAttribute('data-number') || '';
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var link = prLink(repo, num);
+        var repoShort = repo.split('/').pop() || repo;
+        
+        // Decode any URL-encoded characters in the title
+        var decodedTitle = prTitle;
+        try { decodedTitle = decodeURIComponent(prTitle.replace(/\+/g, ' ')); } catch(e) {}
+        
+        // Build review request message - single line
+        var msg = 'PR Ready for Review: ' + decodedTitle + ' ' + link;
+        
+        copyCommand(msg, 'Review request copied!');
+        reviewBtn.textContent = 'COPIED!';
+        setTimeout(function() {
+          reviewBtn.textContent = 'CALL THE CHEF';
+        }, 1500);
+        return;
+      }
+      // MERGE button handler - merges the PR
+      var mergeBtn = e.target && e.target.closest ? e.target.closest('button.merge-btn') : null;
+      if (mergeBtn) {
+        var repo = mergeBtn.getAttribute('data-repo') || '';
+        var num = mergeBtn.getAttribute('data-number') || '';
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        mergeBtn.textContent = 'MERGING...';
+        mergeBtn.disabled = true;
+        
+        // Call merge API
+        fetch('/api/merge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo: repo, number: parseInt(num, 10) })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.merged) {
+            mergeBtn.textContent = 'MERGED!';
+            mergeBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+            // Remove the row after a short delay since the PR is now merged
+            setTimeout(function() {
+              var row = mergeBtn.closest('tr');
+              if (row) row.remove();
+            }, 2000);
+          } else {
+            mergeBtn.textContent = 'FAILED';
+            mergeBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
+            setTimeout(function() {
+              mergeBtn.textContent = 'SERVE IT';
+              mergeBtn.style.background = '';
+              mergeBtn.disabled = false;
+            }, 2000);
+          }
+        })
+        .catch(function() {
+          mergeBtn.textContent = 'ERROR';
+          mergeBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
+          setTimeout(function() {
+            mergeBtn.textContent = 'SERVE IT';
+            mergeBtn.style.background = '';
+            mergeBtn.disabled = false;
+          }, 2000);
+        });
+        return;
+      }
+      // Fork button handler - open folder in Fork app
+      var forkBtn = e.target && e.target.closest ? e.target.closest('button.fork-btn') : null;
+      if (forkBtn) {
+        var path = forkBtn.getAttribute('data-path');
+        if (!path) return;
+        e.preventDefault();
+        e.stopPropagation();
+        fetch('/api/open-fork', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: path })
+        });
         return;
       }
       var refreshBtn = e.target && e.target.closest ? e.target.closest('button.row-refresh') : null;
@@ -3178,8 +3492,16 @@
         if (!repo || !num) return;
         e.preventDefault();
         e.stopPropagation();
+        
+        // Add loading overlay
+        row.style.position = 'relative';
+        var loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'row-loading-overlay';
+        row.appendChild(loadingOverlay);
+        
         refreshBtn.disabled = true;
-        refreshBtn.textContent = '…';
+        refreshBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         fetch('/api/pr?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
           .then(function(r) { return r.json(); })
           .then(function(data) {
@@ -3193,10 +3515,12 @@
               }
             }
           })
-          .catch(function() {})
+          .catch(function() {
+            // Remove overlay on error
+            if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+          })
           .finally(function() {
-            refreshBtn.disabled = false;
-            refreshBtn.textContent = '↻';
+            // Overlay is removed when row.innerHTML is replaced, no cleanup needed on success
           });
         return;
       }
@@ -3483,13 +3807,182 @@
     if (cachedInitiatives && cachedInitiatives.length > 0) {
       renderInitiativeCards(cachedInitiatives, null, true);
     }
+    // Populate initial loading food track with all initiatives
+    var initialFoodTrack = document.getElementById('loading-food-track');
+    if (initialFoodTrack) {
+      initialFoodTrack.innerHTML = buildLoadingFoodItems();
+    }
+    initLoadingGame();
     load();
-    loadEvents();
-    setInterval(loadEvents, EVENTS_POLL_MS);
+    // Disabled: GitHub API rate limiting
+    // loadEvents();
+    // setInterval(loadEvents, EVENTS_POLL_MS);
+    
+    // Auto-refresh PR data with polling - DISABLED due to GitHub rate limiting
+    var cachedPrData = {}; // repo#number -> { unresolved, checks }
+    
+    async function pollAndRefreshPRs() {
+      try {
+        var r = await fetch('/api/status');
+        var data = await r.json();
+        if (!data.initiatives) return;
+        
+        // Build list of all PRs and their current state
+        for (var i = 0; i < data.initiatives.length; i++) {
+          var init = data.initiatives[i];
+          var prs = init.prs || [];
+          for (var j = 0; j < prs.length; j++) {
+            var pr = prs[j];
+            var prKey = pr.repo + '#' + pr.number;
+            var newState = {
+              unresolved: pr.unresolved || 0,
+              checks: JSON.stringify(pr.checks || {}),
+              failingChecks: pr.failingChecks || 0
+            };
+            
+            // Check if state changed
+            var oldState = cachedPrData[prKey];
+            if (oldState) {
+              var changed = oldState.unresolved !== newState.unresolved ||
+                            oldState.checks !== newState.checks ||
+                            oldState.failingChecks !== newState.failingChecks;
+              
+              if (changed) {
+                console.log('PR changed:', prKey, 'unresolved:', oldState.unresolved, '->', newState.unresolved);
+                // Update the row with animation
+                var row = document.querySelector('tr[data-repo="' + pr.repo + '"][data-number="' + pr.number + '"]');
+                if (row) {
+                  row.innerHTML = buildPrRowCells(pr);
+                  if (typeof lucide !== 'undefined') lucide.createIcons();
+                  
+                  // Apply Mario coin bounce animation
+                  var checkIcons = row.querySelectorAll('.check-icon');
+                  checkIcons.forEach(function(icon) {
+                    icon.classList.add('coin-bounce');
+                    setTimeout(function() { icon.classList.remove('coin-bounce'); }, 600);
+                  });
+                  
+                  var commentsEl = row.querySelector('.comments-unresolved');
+                  if (commentsEl) {
+                    commentsEl.classList.add('coin-bounce-comments');
+                    setTimeout(function() { commentsEl.classList.remove('coin-bounce-comments'); }, 600);
+                  }
+                  
+                  // Flash row background
+                  row.style.transition = 'background-color 0.3s';
+                  row.style.backgroundColor = 'rgba(255, 215, 0, 0.15)';
+                  setTimeout(function() { row.style.backgroundColor = ''; }, 1500);
+                  
+                  if (hasConflicts(pr)) {
+                    row.setAttribute('data-has-conflicts', 'true');
+                  } else {
+                    row.removeAttribute('data-has-conflicts');
+                  }
+                  
+                  showToast('PR #' + pr.number + ' updated');
+                }
+              }
+            }
+            
+            // Update cache
+            cachedPrData[prKey] = newState;
+          }
+        }
+      } catch (e) {
+        console.error('Poll refresh error:', e);
+      }
+    }
+    
+    // Polling disabled due to GitHub rate limiting
+    // Use manual refresh button or set up webhooks for real-time updates
+    // setTimeout(function() {
+    //   setInterval(pollAndRefreshPRs, PR_REFRESH_POLL_MS);
+    // }, 5000);
+    
     chefTweakInit();
     frameCoordsInit();
     // Initialize toast icon
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    
+    // SSE: Real-time updates from GitHub webhooks
+    var sseConnection = null;
+    var sseReconnectTimeout = null;
+    
+    function connectSSE() {
+      if (sseConnection) {
+        sseConnection.close();
+      }
+      
+      console.log('SSE: Connecting...');
+      sseConnection = new EventSource('/api/sse');
+      
+      sseConnection.addEventListener('connected', function(e) {
+        var data = JSON.parse(e.data);
+        console.log('SSE: Connected with client ID', data.clientId);
+        showToast('Live updates connected');
+      });
+      
+      sseConnection.addEventListener('pr-update', function(e) {
+        var data = JSON.parse(e.data);
+        var pr = data.pr;
+        console.log('SSE: PR update received', pr.repo, '#' + pr.number, 'unresolved:', pr.unresolved);
+        
+        // Find and update the row in the table
+        var row = document.querySelector('tr[data-repo="' + pr.repo + '"][data-number="' + pr.number + '"]');
+        if (row) {
+          row.innerHTML = buildPrRowCells(pr);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          
+          // Apply Mario coin bounce animation to check icons
+          var checkIcons = row.querySelectorAll('.check-icon');
+          checkIcons.forEach(function(icon) {
+            icon.classList.add('coin-bounce');
+            setTimeout(function() {
+              icon.classList.remove('coin-bounce');
+            }, 600);
+          });
+          
+          // Apply bounce to unresolved comments with special style
+          var commentsEl = row.querySelector('.comments-unresolved');
+          if (commentsEl) {
+            commentsEl.classList.add('coin-bounce-comments');
+            setTimeout(function() {
+              commentsEl.classList.remove('coin-bounce-comments');
+            }, 600);
+          }
+          
+          // Flash the row background briefly
+          row.style.transition = 'background-color 0.3s';
+          row.style.backgroundColor = 'rgba(255, 215, 0, 0.15)';
+          setTimeout(function() {
+            row.style.backgroundColor = '';
+          }, 1500);
+          
+          // Update conflicts attribute
+          if (hasConflicts(pr)) {
+            row.setAttribute('data-has-conflicts', 'true');
+          } else {
+            row.removeAttribute('data-has-conflicts');
+          }
+          
+          showToast('PR #' + pr.number + ' updated');
+        }
+      });
+      
+      sseConnection.addEventListener('ping', function(e) {
+        // Keep-alive ping, no action needed
+      });
+      
+      sseConnection.onerror = function(e) {
+        console.log('SSE: Connection error, reconnecting in 5s...');
+        sseConnection.close();
+        if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
+        sseReconnectTimeout = setTimeout(connectSSE, 5000);
+      };
+    }
+    
+    // Start SSE connection
+    connectSSE();
   </script>
 </body>
 </html>

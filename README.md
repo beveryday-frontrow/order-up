@@ -62,7 +62,7 @@ Only needed if you want to generate custom initiative icons via DALL-E.
 
 ```bash
 # Set in your shell profile (~/.zshrc or ~/.bashrc)
-export OPENAI_API_KEY="sk-your-api-key-here"
+export GEMINI_API_KEY="your-gemini-api-key-here"
 ```
 
 Get your API key from: https://platform.openai.com/api-keys
@@ -216,7 +216,7 @@ Add to your Cursor MCP settings (`.cursor/mcp.json`):
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for generating initiative icons | No (icons are optional) |
+| `GEMINI_API_KEY` | Google Gemini API key for generating initiative icons (Imagen) | No (icons are optional) |
 | `GITHUB_TOKEN` | GitHub token (uses `gh` auth by default) | No |
 | `PORT` | Dashboard port (default: 3333) | No |
 

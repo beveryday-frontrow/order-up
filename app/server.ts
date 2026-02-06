@@ -8,6 +8,25 @@ import { spawn } from "child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// SSE clients for real-time updates
+interface SSEClient {
+  id: number;
+  res: express.Response;
+}
+const sseClients: SSEClient[] = [];
+let sseClientId = 0;
+
+function broadcastSSE(event: string, data: unknown) {
+  const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.res.write(message);
+    } catch {
+      // Client disconnected, will be cleaned up
+    }
+  }
+}
+
 // Resolve pr-watcher root (config/tracking.json and scripts/ live here)
 function findRoot(): string {
   const candidates = [
@@ -62,6 +81,8 @@ interface PRStatus {
   /** true = no conflicts, false = has conflicts, null = unknown */
   mergeable?: boolean | null;
   mergeStateStatus?: string;
+  /** APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or empty */
+  reviewDecision?: string;
 }
 
 interface InitiativeStatus {
@@ -267,11 +288,11 @@ async function getPRTitleAndHead(
   }
 }
 
-/** Get PR merge state (mergeable, mergeStateStatus). mergeable false = conflicts. */
+/** Get PR merge state (mergeable, mergeStateStatus, reviewDecision). mergeable false = conflicts. */
 async function getPRMergeState(
   repo: string,
   number: number
-): Promise<{ mergeable: boolean | null; mergeStateStatus: string }> {
+): Promise<{ mergeable: boolean | null; mergeStateStatus: string; reviewDecision: string }> {
   const out = await runAllowExit("gh", [
     "pr",
     "view",
@@ -279,17 +300,18 @@ async function getPRMergeState(
     "--repo",
     repo,
     "--json",
-    "mergeable,mergeStateStatus",
+    "mergeable,mergeStateStatus,reviewDecision",
   ]);
-  if (!out) return { mergeable: null, mergeStateStatus: "" };
+  if (!out) return { mergeable: null, mergeStateStatus: "", reviewDecision: "" };
   try {
-    const data = JSON.parse(out) as { mergeable?: boolean | null; mergeStateStatus?: string };
+    const data = JSON.parse(out) as { mergeable?: boolean | null; mergeStateStatus?: string; reviewDecision?: string };
     return {
       mergeable: data.mergeable === true ? true : data.mergeable === false ? false : null,
       mergeStateStatus: typeof data.mergeStateStatus === "string" ? data.mergeStateStatus : "",
+      reviewDecision: typeof data.reviewDecision === "string" ? data.reviewDecision : "",
     };
   } catch {
-    return { mergeable: null, mergeStateStatus: "" };
+    return { mergeable: null, mergeStateStatus: "", reviewDecision: "" };
   }
 }
 
@@ -413,16 +435,8 @@ app.use(express.json({ limit: "1mb" }));
 
 const FIX_CHECK_CATEGORIES = ["lint", "type", "test", "e2e", "other"] as const;
 
-// GET /api/pr?repo=...&number=... — fetch status for a single PR (for row refresh)
-app.get("/api/pr", async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  const repo = req.query.repo as string;
-  const number = req.query.number;
-  const num = typeof number === "string" ? parseInt(number, 10) : Number(number);
-  if (!repo || !Number.isInteger(num)) {
-    res.status(400).json({ error: "Missing or invalid repo or number" });
-    return;
-  }
+// Fetch fresh PR data for a single PR (reusable for API and webhook broadcasts)
+async function fetchPRData(repo: string, num: number): Promise<PRStatus | null> {
   try {
     const raw = await readFile(CONFIG_PATH, "utf-8");
     const config: TrackingConfig = JSON.parse(raw);
@@ -461,7 +475,7 @@ app.get("/api/pr", async (req, res) => {
     ]);
     const headRefName = titleAndHead.headRefName || "";
     const init = repoAndBranchToInitiative.get(`${repo}#${headRefName}`);
-    const pr: PRStatus = {
+    return {
       repo,
       number: num,
       branch: headRefName,
@@ -474,10 +488,28 @@ app.get("/api/pr", async (req, res) => {
       initiativeName: init?.name,
       mergeable: mergeState.mergeable,
       mergeStateStatus: mergeState.mergeStateStatus,
+      reviewDecision: mergeState.reviewDecision,
     };
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/pr?repo=...&number=... — fetch status for a single PR (for row refresh)
+app.get("/api/pr", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const repo = req.query.repo as string;
+  const number = req.query.number;
+  const num = typeof number === "string" ? parseInt(number, 10) : Number(number);
+  if (!repo || !Number.isInteger(num)) {
+    res.status(400).json({ error: "Missing or invalid repo or number" });
+    return;
+  }
+  const pr = await fetchPRData(repo, num);
+  if (pr) {
     res.json({ pr });
-  } catch (e) {
-    res.status(500).json({ error: String(e) });
+  } else {
+    res.status(500).json({ error: "Failed to fetch PR data" });
   }
 });
 
@@ -516,6 +548,18 @@ app.post("/api/merge", async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
+});
+
+// POST /api/open-fork — open a folder in Fork git client
+app.post("/api/open-fork", (req, res) => {
+  const path = req.body?.path;
+  if (typeof path !== "string" || !path.trim()) {
+    res.status(400).json({ error: "Missing path" });
+    return;
+  }
+  // Use 'open' command to open Fork with the specified path
+  spawn("open", ["-a", "Fork", path.trim()], { stdio: "ignore" }).unref();
+  res.json({ opened: true });
 });
 
 // POST /api/fix-all-issues — spawn agents for all PRs with failed checks, unresolved comments, or conflicts
@@ -690,7 +734,7 @@ const RANDOM_FOOD_ITEMS = [
 ];
 
 const PIXEL_ART_PROMPT =
-  "16-bit pixel art of {food} in the style of 1980s arcade game Burger Time. Cute character centered on a SOLID FLAT pure lime green background (exactly #00FF00, RGB 0,255,0). Visible pixel blocks, thick black outlines. No text, no extra elements. The ENTIRE background must be a single uniform bright green color with no gradients or shading for chroma key removal.";
+  "High quality 16-bit pixel art of {food} in the style of 1980s arcade game Burger Time. Cute food character, centered composition. The background must be SOLID BRIGHT MAGENTA (#FF00FF, pure fuchsia pink). Visible pixel blocks, thick black outlines, vibrant colors. No text, no extra elements. The entire background must be a uniform flat magenta color for easy chroma key removal.";
 
 // Job tracking for async food project creation
 interface CreationJob {
@@ -818,57 +862,49 @@ async function runCreationJob(foodName: string, config: TrackingConfig) {
     const initiativesDir = join(__dirname, "public", "images", "initiatives");
     await mkdir(initiativesDir, { recursive: true });
     const imagePath = join(initiativesDir, `${foodName}.png`);
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY not set");
+      throw new Error("GEMINI_API_KEY not set");
     }
 
     const prompt = PIXEL_ART_PROMPT.replace("{food}", foodName);
-    const genRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "dall-e-2",
-        prompt,
-        n: 1,
-        size: "256x256",
-      }),
-    });
+    const genRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: { sampleCount: 1 },
+        }),
+      }
+    );
     
     if (!genRes.ok) {
       const errText = await genRes.text();
-      throw new Error(`OpenAI image generation failed: ${errText}`);
+      throw new Error(`Gemini image generation failed: ${errText}`);
     }
     
-    const genData = (await genRes.json()) as { data?: { url?: string }[] };
-    const url = genData.data?.[0]?.url;
-    if (!url) throw new Error("OpenAI returned no image URL");
+    const genData = (await genRes.json()) as { predictions?: { bytesBase64Encoded?: string }[] };
+    const base64Data = genData.predictions?.[0]?.bytesBase64Encoded;
+    if (!base64Data) throw new Error("Gemini returned no image data");
 
     job.progress = 25;
-    job.step = "Downloading icon...";
+    job.step = "Processing icon...";
 
-    const imgRes = await fetch(url);
-    if (!imgRes.ok) throw new Error("Failed to download generated image");
-    
-    const buf = Buffer.from(await imgRes.arrayBuffer());
+    const buf = Buffer.from(base64Data, "base64");
     const tempPath = join(dirname(imagePath), `_tmp_${foodName}.png`);
     await writeFile(tempPath, buf);
     
+    // Remove black background (common in pixel art generation)
     const magickOk = await new Promise<{ ok: boolean }>((resolve) => {
-      // Remove all bright green colors using chroma key
       const proc = spawn(
         "magick",
         [
           tempPath,
           "-alpha", "set",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#00FF00",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#00EE00",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#11FF11",
-          "-fuzz", "25%", "-fill", "none", "-opaque", "lime",
+          "-fuzz", "20%", "-fill", "none", "-opaque", "#FF00FF",
           imagePath
         ],
         { cwd: ROOT }
@@ -975,59 +1011,49 @@ app.post("/api/regenerate-initiative-image", async (req, res) => {
       res.status(400).json({ error: "Missing or invalid initiative name" });
       return;
     }
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      res.status(400).json({ error: "OPENAI_API_KEY not set. Cannot regenerate image." });
+      res.status(400).json({ error: "GEMINI_API_KEY not set. Cannot regenerate image." });
       return;
     }
     const initiativesDir = join(__dirname, "public", "images", "initiatives");
     await mkdir(initiativesDir, { recursive: true });
     const imagePath = join(initiativesDir, `${name}.png`);
     const prompt = PIXEL_ART_PROMPT.replace("{food}", name);
-    const genRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "dall-e-2",
-        prompt,
-        n: 1,
-        size: "256x256",
-      }),
-    });
+    const genRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: { sampleCount: 1 },
+        }),
+      }
+    );
     if (!genRes.ok) {
       const errText = await genRes.text();
-      res.status(400).json({ error: `OpenAI image generation failed: ${errText}` });
+      res.status(400).json({ error: `Gemini image generation failed: ${errText}` });
       return;
     }
-    const genData = (await genRes.json()) as { data?: { url?: string }[] };
-    const url = genData.data?.[0]?.url;
-    if (!url) {
-      res.status(500).json({ error: "OpenAI returned no image URL" });
+    const genData = (await genRes.json()) as { predictions?: { bytesBase64Encoded?: string }[] };
+    const base64Data = genData.predictions?.[0]?.bytesBase64Encoded;
+    if (!base64Data) {
+      res.status(500).json({ error: "Gemini returned no image data" });
       return;
     }
-    const imgRes = await fetch(url);
-    if (!imgRes.ok) {
-      res.status(500).json({ error: "Failed to download generated image" });
-      return;
-    }
-    const buf = Buffer.from(await imgRes.arrayBuffer());
+    const buf = Buffer.from(base64Data, "base64");
     const tempPath = join(dirname(imagePath), `_tmp_${name}.png`);
     await writeFile(tempPath, buf);
+    // Remove black background (common in pixel art generation)
     const magickOk = await new Promise<{ ok: boolean; stderr: string }>((resolve) => {
       let stderr = "";
-      // Remove all bright green colors using chroma key
       const proc = spawn(
         "magick",
         [
           tempPath,
           "-alpha", "set",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#00FF00",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#00EE00",
-          "-fuzz", "30%", "-fill", "none", "-opaque", "#11FF11",
-          "-fuzz", "25%", "-fill", "none", "-opaque", "lime",
+          "-fuzz", "20%", "-fill", "none", "-opaque", "#FF00FF",
           imagePath
         ],
         { cwd: ROOT }
@@ -1166,6 +1192,7 @@ app.get("/api/status", async (_req, res) => {
         initiativeName: init?.name,
         mergeable: mergeState.mergeable,
         mergeStateStatus: mergeState.mergeStateStatus,
+        reviewDecision: mergeState.reviewDecision,
       });
     }
 
@@ -1276,6 +1303,39 @@ app.get("/api/events", async (_req, res) => {
   }
 });
 
+// SSE endpoint for real-time updates
+app.get("/api/sse", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+  res.flushHeaders();
+
+  const clientId = ++sseClientId;
+  const client: SSEClient = { id: clientId, res };
+  sseClients.push(client);
+  console.log(`SSE client ${clientId} connected (${sseClients.length} total)`);
+
+  // Send initial ping
+  res.write(`event: connected\ndata: ${JSON.stringify({ clientId })}\n\n`);
+
+  // Keep-alive ping every 30 seconds
+  const pingInterval = setInterval(() => {
+    try {
+      res.write(`event: ping\ndata: ${JSON.stringify({ time: Date.now() })}\n\n`);
+    } catch {
+      clearInterval(pingInterval);
+    }
+  }, 30000);
+
+  req.on("close", () => {
+    clearInterval(pingInterval);
+    const idx = sseClients.findIndex((c) => c.id === clientId);
+    if (idx !== -1) sseClients.splice(idx, 1);
+    console.log(`SSE client ${clientId} disconnected (${sseClients.length} remaining)`);
+  });
+});
+
 // GitHub webhook: when GH events come in, trigger the Cursor agent for that PR if tracked.
 // Configure in GitHub repo → Settings → Webhooks: Payload URL = https://your-host/webhook/github,
 // Content type = application/json, Secret = optional (set GITHUB_WEBHOOK_SECRET env).
@@ -1297,14 +1357,47 @@ app.post("/webhook/github", async (req, res) => {
     }
   }
   res.status(202).send("Accepted");
+  const eventType = req.headers["x-github-event"] as string;
   const payload = req.body as {
     repository?: { full_name?: string };
     issue?: { number?: number; pull_request?: unknown };
     pull_request?: { number?: number };
+    check_suite?: { pull_requests?: { number: number }[] };
+    check_run?: { pull_requests?: { number: number }[] };
+    action?: string;
   };
   const repo = payload.repository?.full_name;
-  const num = payload.pull_request?.number ?? (payload.issue?.pull_request ? payload.issue?.number : undefined);
+  
+  // Get PR number from various event types
+  let num = payload.pull_request?.number ?? (payload.issue?.pull_request ? payload.issue?.number : undefined);
+  
+  // For check_suite and check_run events, get PR from nested array
+  if (!num && payload.check_suite?.pull_requests?.[0]) {
+    num = payload.check_suite.pull_requests[0].number;
+  }
+  if (!num && payload.check_run?.pull_requests?.[0]) {
+    num = payload.check_run.pull_requests[0].number;
+  }
+  
   if (!repo || !num) return;
+  
+  console.log(`Webhook: ${eventType} for ${repo}#${num} (action: ${payload.action || "n/a"})`);
+  
+  // Always fetch fresh data and broadcast to connected clients
+  // Small delay to let GitHub's API update
+  setTimeout(async () => {
+    try {
+      const pr = await fetchPRData(repo, num!);
+      if (pr) {
+        console.log(`Broadcasting PR update: ${repo}#${num} (unresolved: ${pr.unresolved}, checks: ${JSON.stringify(pr.checks)})`);
+        broadcastSSE("pr-update", { pr, eventType, timestamp: Date.now() });
+      }
+    } catch (e) {
+      console.error(`Failed to fetch PR data for broadcast: ${e}`);
+    }
+  }, 2000); // 2 second delay to let GitHub API reflect changes
+  
+  // Also run agent if tracked (existing behavior)
   try {
     const raw = await readFile(CONFIG_PATH, "utf-8");
     const config: TrackingConfig = JSON.parse(raw);
@@ -1312,7 +1405,8 @@ app.post("/webhook/github", async (req, res) => {
       init.prs?.some((pr) => pr.repo === repo && pr.number === num)
     );
     if (!tracked) return;
-    spawn(RUN_AGENT_SCRIPT, [repo, String(num)], { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+    // Don't auto-run agent anymore, just broadcast updates
+    // spawn(RUN_AGENT_SCRIPT, [repo, String(num)], { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
   } catch {
     // ignore
   }
