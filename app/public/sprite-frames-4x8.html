@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sprite frames – 4×8 grid</title>
+  <style>
+    :root { --bg: #18181b; --surface: #27272a; --text: #fafafa; --text-muted: #a1a1aa; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; background: var(--bg); color: var(--text); }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem; }
+    a { color: #60a5fa; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .frame { background: var(--surface); border: 1px solid #3f3f46; border-radius: 8px; padding: 0.5rem; text-align: center; }
+    .frame img { display: block; width: 256px; height: 128px; object-fit: none; margin: 0 auto 0.25rem; image-rendering: pixelated; }
+    .frame .label { font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <h1>Sprite frames – 4×8 grid (256×128 px)</h1>
+  <p><a href="/sprite-frames.html">← Back to 8×8 grid</a></p>
+  <p>Alternative breakdown. If 256×128 cells show two poses side-by-side, use 8×8 (128×128) instead.</p>
+  <div class="grid" id="grid"></div>
+  <script>
+    var base = '/images/sprite-frames-4x8/';
+    var grid = document.getElementById('grid');
+    for (var row = 0; row < 8; row++) {
+      for (var col = 0; col < 4; col++) {
+        var f = 'r' + row + 'c' + col + '.png';
+        var div = document.createElement('div');
+        div.className = 'frame';
+        div.innerHTML = '<img src="' + base + f + '" alt="r' + row + 'c' + col + '" /><span class="label">r' + row + 'c' + col + '</span>';
+        grid.appendChild(div);
+      }
+    }
+  </script>
+</body>
+</html>

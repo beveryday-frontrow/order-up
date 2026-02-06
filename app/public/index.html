@@ -1,0 +1,3495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Up!</title>
+  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface-hover: #27272a;
+      --border: #27272a;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --initiative: #a78bfa;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --space: 1.5rem;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .app {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space) 24px 48px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: var(--space);
+      padding-bottom: var(--space);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+    .logo-link {
+      display: flex;
+      align-items: center;
+    }
+    .logo-img {
+      height: 160px;
+      width: auto;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .meta {
+      color: var(--text-dim);
+      font-size: 0.8125rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--surface-hover);
+      border-color: var(--text-dim);
+    }
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--text);
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tbody tr {
+      transition: background 0.1s;
+    }
+    tbody tr:hover {
+      background: rgba(39, 39, 42, 0.5);
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    td {
+      color: var(--text);
+      vertical-align: middle;
+    }
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .init {
+      font-weight: 600;
+      color: var(--initiative);
+    }
+    .init:hover {
+      text-decoration: underline;
+    }
+    .check-cell {
+      text-align: center;
+      width: 1%;
+      white-space: nowrap;
+    }
+    .check-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .check-icon.pass { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+    .check-icon.fail { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .check-icon.fail.fix-check { cursor: pointer; text-decoration: none; }
+    .check-icon.fail.fix-check:hover { filter: brightness(1.15); }
+    .check-icon.pending { background: rgba(234, 179, 8, 0.2); color: var(--warning); }
+    .check-icon.none {
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      font-weight: 400;
+    }
+    .comments-unresolved {
+      color: var(--warning);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .comments-unresolved svg {
+      width: 14px;
+      height: 14px;
+    }
+    .th-short {
+      display: none;
+    }
+    .th-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: help;
+    }
+    .th-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .checks-header-icons {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 0.5rem;
+    }
+    .comments-link { color: inherit; text-decoration: none; }
+    .comments-link:hover { text-decoration: underline; }
+    .conflicts-banner {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: rgba(24, 24, 27, 0.92);
+      backdrop-filter: blur(2px);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.75rem;
+      z-index: 5;
+    }
+    .conflicts-banner__text {
+      color: var(--danger);
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .conflicts-banner__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 0.35rem 0.65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: inherit;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .conflicts-banner__btn:hover {
+      background: #dc2626;
+      transform: translateY(-1px);
+    }
+    .conflicts-banner__btn:active {
+      transform: translateY(0);
+    }
+    .checks-cell {
+      padding: 0.5rem 0.75rem;
+    }
+    .checks-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 1rem;
+      min-width: 280px;
+    }
+    .check-icon-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+    }
+    tr[data-has-conflicts="true"] .check-icon-wrap {
+      opacity: 0.25;
+    }
+    tr[data-has-conflicts="true"] .conflicts-banner {
+      opacity: 1;
+    }
+    .checks-header {
+      text-align: center;
+    }
+    .preview-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+    }
+    .preview-link {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-decoration: none;
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .preview-link:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    td code {
+      font-size: 0.8125rem;
+      background: var(--surface-hover);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    .initiative-group-header td { background: var(--surface-hover); color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+    .initiative-group-header td > div { display: flex; align-items: center; gap: 1rem; }
+    .initiative-focus-input {
+      flex: 0 1 auto;
+      width: 350px;
+      padding: 0.35rem 0.5rem;
+      background: linear-gradient(135deg, rgba(255,107,107,0.1) 0%, rgba(255,193,7,0.1) 100%);
+      border: none;
+      border-left: 3px solid var(--warning);
+      border-radius: 4px;
+      color: #ffd54f;
+      font-size: 1rem;
+      font-weight: 600;
+      font-style: italic;
+      text-transform: none;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 10px rgba(255,213,79,0.3);
+    }
+    .initiative-focus-input::placeholder {
+      color: var(--text-dim);
+      opacity: 0.4;
+      font-weight: 400;
+      font-style: italic;
+      text-shadow: none;
+    }
+    .initiative-focus-input:hover {
+      background: linear-gradient(135deg, rgba(255,107,107,0.15) 0%, rgba(255,193,7,0.15) 100%);
+      text-shadow: 0 0 15px rgba(255,213,79,0.5);
+    }
+    .initiative-focus-input:focus {
+      outline: none;
+      background: linear-gradient(135deg, rgba(255,107,107,0.2) 0%, rgba(255,193,7,0.2) 100%);
+      color: #ffeb3b;
+      text-shadow: 0 0 20px rgba(255,235,59,0.6);
+      border-left-color: #ff6b6b;
+    }
+    .initiative-with-icon { display: inline-flex; align-items: center; gap: 0.375rem; }
+    .initiative-icon { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; border-radius: 8px; flex-shrink: 0; }
+    .pr-cell { display: inline-flex; align-items: center; white-space: nowrap; gap: 0.25rem; }
+    .row-refresh { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; font-size: 1rem; line-height: 1; border-radius: 4px; display: inline-flex; align-items: center; }
+    .row-refresh:hover { color: var(--accent); background: var(--surface-hover); }
+    .row-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row-merge-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.35rem; vertical-align: middle; }
+    .row-merge-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .repo-cell { display: block; }
+    .branch-name {
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .branch-name:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      z-index: 1000;
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .toast svg {
+      width: 16px;
+      height: 16px;
+      color: var(--success);
+    }
+    .platform-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .platform-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .title-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .loading, .error { padding: 1.25rem; color: var(--text-muted); }
+    /* Platformer loading stage (Burger Time style) */
+    .loading-stage {
+      padding: 1rem 0 0;
+      overflow: hidden;
+      height: 160px;
+      position: relative;
+      background: linear-gradient(180deg, var(--surface-hover) 0%, var(--surface) 70%, #2d2419 100%);
+    }
+    .loading-stage__title {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .loading-stage__hint {
+      position: absolute;
+      bottom: 32px;
+      right: 12px;
+      color: var(--text-dim);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+    }
+    .loading-stage__hint kbd {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.1rem 0.35rem;
+      font-family: inherit;
+      font-size: 0.625rem;
+      margin-right: 0.25rem;
+    }
+    .loading-stage__ground {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 24px;
+      background: repeating-linear-gradient(90deg, #3d3225 0px, #3d3225 16px, #4a3d2e 16px, #4a3d2e 32px);
+      border-top: 3px solid #5c4d3a;
+    }
+    .loading-stage__chef {
+      position: absolute;
+      left: 14%;
+      bottom: 24px;
+      /* Default: match DEFAULT_FRAME_COORDS (2200×600, frame 0 at 4,0,550×600) so preview and game match */
+      width: 59px;
+      height: 64px;
+      background: url(/images/chef-run-jump.png) no-repeat 0 0;
+      background-size: 235px 64px;
+      background-position: 0 0;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: none;
+      z-index: 2;
+    }
+    .loading-stage__chef--hit {
+      filter: brightness(1.4) sepia(0.3);
+    }
+    .loading-stage__chef--dead {
+      transition: opacity 0.08s ease-out;
+    }
+    .loading-stage__food-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 36px;
+      height: 48px;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .loading-stage__food {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      bottom: 0;
+      left: 100%;
+      animation: food-scroll 5s linear infinite;
+      image-rendering: auto;
+    }
+    .loading-stage__food:nth-child(1) { animation-delay: 0s; }
+    .loading-stage__food:nth-child(2) { animation-delay: 0.85s; }
+    .loading-stage__food:nth-child(3) { animation-delay: 1.7s; }
+    .loading-stage__food:nth-child(4) { animation-delay: 2.55s; }
+    .loading-stage__food:nth-child(5) { animation-delay: 3.4s; }
+    .loading-stage__food:nth-child(6) { animation-delay: 4.25s; }
+    @keyframes food-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-120vw); }
+    }
+    /* Chef animation strip – each sprite 1248×832; custom frame count and viewport */
+    .chef-animations {
+      display: none; /* hidden for now */
+      flex-wrap: wrap;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      padding: 1rem 0;
+      margin-bottom: var(--space);
+      border-bottom: 1px solid var(--border);
+    }
+    .chef-animations__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    .chef-animations__title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .chef-animations__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chef-animations__item .chef-anim-wrap {
+      cursor: pointer;
+      outline: none;
+    }
+    .chef-animations__item--focused .chef-anim-wrap {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .chef-animations__label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .chef-anim-wrap {
+      overflow: hidden;
+      border-radius: var(--radius-sm);
+      background-color: var(--surface-hover);
+      background-repeat: no-repeat;
+      flex-shrink: 0;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      transition: none;
+      --frame-width: 50px;
+      --frame-index: 0;
+      --x-offset: 0px;
+      --y-offset: -12px;
+      --x-0: 0px; --y-0: -12px; --x-1: 0px; --y-1: -12px; --x-2: 0px; --y-2: -12px; --x-3: 0px; --y-3: -12px;
+    }
+    .chef-animations--tweak .chef-anim-wrap--4,
+    .chef-animations--tweak .chef-anim-wrap--2,
+    .chef-animations--tweak .chef-anim-wrap--2-3,
+    .chef-animations--tweak .chef-anim-wrap--static,
+    .chef-animations__item--focused .chef-anim-wrap--4,
+    .chef-animations__item--focused .chef-anim-wrap--2,
+    .chef-animations__item--focused .chef-anim-wrap--2-3,
+    .chef-animations__item--focused .chef-anim-wrap--static {
+      background-position: calc(-1 * var(--frame-index) * var(--frame-width) + var(--x-offset)) var(--y-offset);
+    }
+    .chef-animations--tweak .chef-anim-wrap--1,
+    .chef-animations__item--focused .chef-anim-wrap--1 {
+      background-position: var(--x-offset) var(--y-offset);
+    }
+    /* 1248×832 at scale 0.16 = 200×133; zoomed in so character fills more of box */
+    .chef-anim-wrap--4 {
+      width: 50px;
+      height: 77px;
+      background-size: 200px 133px;
+      background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0);
+      animation: chef-bg-4 1.2s steps(4) infinite;
+    }
+    .chef-animations--tweak .chef-anim-wrap--4,
+    .chef-animations__item--focused .chef-anim-wrap--4 { animation: none; }
+    @keyframes chef-bg-4 {
+      0% { background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0); }
+      25% { background-position: calc(-1 * var(--frame-width) + var(--x-1)) var(--y-1); }
+      50% { background-position: calc(-2 * var(--frame-width) + var(--x-2)) var(--y-2); }
+      75% { background-position: calc(-3 * var(--frame-width) + var(--x-3)) var(--y-3); }
+      100% { background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0); }
+    }
+    .chef-anim-wrap--2 {
+      width: 100px;
+      height: 77px;
+      background-size: 200px 133px;
+      --frame-width: 100px;
+      background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0);
+      animation: chef-bg-2 0.8s steps(2) infinite;
+    }
+    .chef-animations--tweak .chef-anim-wrap--2,
+    .chef-animations__item--focused .chef-anim-wrap--2 { animation: none; }
+    @keyframes chef-bg-2 {
+      0% { background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0); }
+      100% { background-position: calc(-1 * var(--frame-width) + var(--x-1)) var(--y-1); }
+    }
+    /* 2-frame from 3-frame strip (67px per frame) */
+    .chef-anim-wrap--2-3 {
+      width: 67px;
+      height: 77px;
+      background-size: 200px 133px;
+      --frame-width: 67px;
+      background-position: calc(0 * var(--frame-width) + var(--x-0)) var(--y-0);
+      animation: chef-bg-2 0.8s steps(2) infinite;
+    }
+    .chef-animations--tweak .chef-anim-wrap--2-3,
+    .chef-animations__item--focused .chef-anim-wrap--2-3 { animation: none; }
+    /* Single frame from a strip (e.g. frame 2 of 3) */
+    .chef-anim-wrap--static {
+      width: 67px;
+      height: 77px;
+      background-size: 200px 133px;
+      --frame-width: 67px;
+      --frame-index: 2;
+      background-position: calc(-1 * var(--frame-index) * var(--frame-width) + var(--x-offset)) var(--y-offset);
+    }
+    /* 3-frame horizontal strip (flamethrower 1159×1156, 3 cols; scale 0.33 = 382×381, frame width 127px); wider */
+    .chef-anim-wrap--3v {
+      width: 127px;
+      height: 120px;
+      background-size: 382px 381px;
+      --frame-index: 0;
+      --frame-width: 127px;
+      background-position: var(--x-offset) var(--y-offset);
+      animation: chef-bg-3h 1s steps(3) infinite;
+    }
+    .chef-animations--tweak .chef-anim-wrap--3v,
+    .chef-animations__item--focused .chef-anim-wrap--3v { animation: none; }
+    .chef-animations--tweak .chef-anim-wrap--3v,
+    .chef-animations__item--focused .chef-anim-wrap--3v {
+      background-position: calc(-1 * var(--frame-index) * var(--frame-width) + var(--x-offset)) var(--y-offset);
+    }
+    @keyframes chef-bg-3h {
+      0% { background-position: var(--x-offset) var(--y-offset); }
+      33.33% { background-position: calc(-127px + var(--x-offset)) var(--y-offset); }
+      66.66% { background-position: calc(-254px + var(--x-offset)) var(--y-offset); }
+      100% { background-position: var(--x-offset) var(--y-offset); }
+    }
+    .chef-anim-wrap--1 {
+      width: 200px;
+      height: 77px;
+      background-size: 200px 133px;
+      background-position: var(--x-offset) var(--y-offset);
+    }
+    /* Tweak controls */
+    .chef-anim-tweak {
+      display: none;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+    .chef-animations--tweak .chef-anim-tweak,
+    .chef-animations__item--focused .chef-anim-tweak { display: flex; }
+    .chef-anim-tweak label { display: flex; align-items: center; gap: 0.25rem; }
+    .chef-anim-tweak input[type="number"] { width: 3.5rem; padding: 0.2rem 0.35rem; font-size: 0.6875rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+    .chef-anim-tweak .frame-btns { display: flex; gap: 0.2rem; }
+    .chef-anim-tweak .frame-btns button { padding: 0.2rem 0.4rem; font-size: 0.6875rem; min-width: 1.5rem; }
+    .chef-animations__item[data-frames="1"] .frame-btns { display: none; }
+    .chef-anim-tweak .chef-align-all-btn { padding: 0.2rem 0.5rem; font-size: 0.6875rem; }
+    .error { color: var(--danger); }
+    /* FINISH HIM button and flamethrower animation */
+    .finish-him-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #ef4444 0%, #f97316 50%, #eab308 100%);
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+    .finish-him-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+    }
+    .finish-him-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .finish-him-btn--active {
+      animation: finish-him-pulse 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes finish-him-pulse {
+      0% { box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
+      100% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.9); }
+    }
+    /* Flamethrower overlay on row */
+    .flamethrower-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 10;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+    /* Chef sprite animations - using chef-sprite-animations.png */
+    /* Sprite sheet: 1088x960, frames: 272x240, flame: 544x240 (2 cols) */
+    /* Display at 50% scale: 136x120 per frame, flame: 272x120 */
+    .chef-sprite {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background-image: url(/images/chef-sprite-animations.png);
+      background-repeat: no-repeat;
+      background-size: 544px 480px; /* 50% scale */
+    }
+    .chef-sprite--run {
+      width: 136px;
+      height: 120px;
+      animation: chef-run 0.4s steps(2) infinite;
+    }
+    @keyframes chef-run {
+      0% { background-position: 0 0; }
+      50% { background-position: -136px 0; }
+      100% { background-position: 0 0; }
+    }
+    .chef-sprite--idle {
+      width: 136px;
+      height: 120px;
+      animation: chef-idle 0.6s steps(4) infinite;
+    }
+    @keyframes chef-idle {
+      /* idle frames are at row 2 cols 2-3 and row 3 cols 2-3 */
+      0% { background-position: -272px -120px; }
+      25% { background-position: -408px -120px; }
+      50% { background-position: -272px -240px; }
+      75% { background-position: -408px -240px; }
+      100% { background-position: -272px -120px; }
+    }
+    .chef-sprite--attack {
+      width: 136px;
+      height: 120px;
+      animation: chef-attack 0.25s steps(2) forwards;
+    }
+    @keyframes chef-attack {
+      /* attack frames are at row 1 cols 2-3 */
+      0% { background-position: -272px 0; }
+      50% { background-position: -408px 0; }
+      100% { background-position: -408px 0; }
+    }
+    .chef-sprite--jump {
+      width: 136px;
+      height: 120px;
+      animation: chef-jump 0.4s steps(2) forwards;
+    }
+    @keyframes chef-jump {
+      /* jump frames are at row 2 cols 0-1 */
+      0% { background-position: 0 -120px; }
+      50% { background-position: -136px -120px; }
+      100% { background-position: -136px -120px; }
+    }
+    .chef-sprite--hurt {
+      width: 136px;
+      height: 120px;
+      /* hurt frame is at row 4 col 0 */
+      background-position: 0 -360px;
+    }
+    .chef-sprite--death {
+      width: 136px;
+      height: 120px;
+      animation: chef-death 1s steps(4) forwards;
+    }
+    @keyframes chef-death {
+      /* hurt -> death -> ash pile frames in row 4 */
+      0% { background-position: 0 -360px; }
+      25% { background-position: -136px -360px; }
+      50% { background-position: -272px -360px; }
+      75%, 100% { background-position: -408px -360px; }
+    }
+    /* Flame animation - wider frame (544x240 -> 272x120 at 50%) */
+    .chef-sprite--flame {
+      width: 272px;
+      height: 120px;
+      /* flame frame is at row 3 cols 0-1 */
+      background-position: 0 -240px;
+    }
+    /* Flamethrower overlay uses the flame sprite */
+    .flamethrower-chef {
+      position: absolute;
+      left: -20px;
+      width: 272px;
+      height: 120px;
+      background: url(/images/chef-sprite-animations.png) no-repeat;
+      background-size: 544px 480px;
+      background-position: 0 -240px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: 11;
+    }
+    /* Sprite preview section */
+    .sprite-preview {
+      display: none; /* Hidden for now */
+      margin-bottom: var(--space);
+    }
+    .sprite-preview__header {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      padding: 0 0.5rem;
+    }
+    .sprite-preview__title {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--text);
+    }
+    .sprite-preview__subtitle {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+    .sprite-preview__grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .sprite-preview__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      background: #2a5030;
+      border-radius: 8px;
+      padding: 1rem;
+      min-width: 150px;
+    }
+    .sprite-preview__item--wide {
+      min-width: 280px;
+    }
+    .sprite-preview__label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sprite-replay-btn {
+      font-size: 0.625rem;
+      padding: 0.2rem 0.5rem;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .sprite-replay-btn:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    /* Unassigned PRs dropdown */
+    .unassigned-dropdown {
+      position: relative;
+    }
+    .unassigned-dropdown__btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .unassigned-dropdown__btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-dim);
+    }
+    .unassigned-dropdown__btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .unassigned-dropdown__badge {
+      background: var(--warning);
+      color: #000;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.1rem 0.4rem;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+    .unassigned-dropdown__menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 0.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      min-width: 320px;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .unassigned-dropdown.open .unassigned-dropdown__menu {
+      display: block;
+    }
+    .unassigned-dropdown__item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 0.875rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .unassigned-dropdown__item:hover {
+      background: var(--surface-hover);
+    }
+    .unassigned-dropdown__item:last-child {
+      border-bottom: none;
+    }
+    .unassigned-dropdown__item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .unassigned-dropdown__item-title {
+      font-size: 0.8125rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .unassigned-dropdown__item-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.6875rem;
+      color: var(--text-dim);
+    }
+    .unassigned-dropdown__item-repo {
+      font-weight: 500;
+    }
+    .unassigned-dropdown__item-branch {
+      font-family: monospace;
+      background: rgba(255,255,255,0.1);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+    }
+    .unassigned-dropdown__item-action {
+      font-size: 0.625rem;
+      padding: 0.25rem 0.5rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .unassigned-dropdown__item-action:hover {
+      filter: brightness(1.1);
+    }
+    .unassigned-dropdown__empty {
+      padding: 1rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8125rem;
+    }
+    /* Inline initiative picker dropdown (for rows with no initiative) */
+    .init-picker {
+      position: relative;
+      display: inline-block;
+    }
+    .init-picker__btn {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .init-picker__btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--warning);
+      color: var(--text);
+    }
+    .init-picker__btn svg {
+      width: 12px;
+      height: 12px;
+    }
+    .init-picker__menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 0.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      min-width: 180px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .init-picker.open .init-picker__menu {
+      display: block;
+    }
+    .init-picker__item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+      font-size: 0.75rem;
+    }
+    .init-picker__item:hover {
+      background: var(--surface-hover);
+    }
+    .init-picker__item:last-child {
+      border-bottom: none;
+    }
+    .init-picker__item-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .init-picker__item-name {
+      color: var(--text);
+    }
+    .init-picker__empty {
+      padding: 0.75rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+    tr.finishing {
+      position: relative;
+    }
+    tr.finishing > td {
+      opacity: 0.3;
+    }
+    tr.finishing .flamethrower-overlay {
+      opacity: 1;
+    }
+    .section {
+      margin-top: var(--space);
+    }
+    .events-section .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .events-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 0.8125rem;
+    }
+    .events-list li {
+      padding: 0.625rem 1.25rem;
+      padding-left: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      transition: background 0.1s, border-left-color 0.1s;
+    }
+    .events-list li:has(a:hover) {
+      border-left-color: var(--accent);
+    }
+    .events-list li:hover {
+      background: rgba(39, 39, 42, 0.4);
+    }
+    .events-list li:last-child {
+      border-bottom: none;
+    }
+    .event-time {
+      color: var(--text-dim);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      min-width: 10rem;
+    }
+    .event-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .event-body a {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .event-body a:hover {
+      color: #60a5fa;
+    }
+    .event-actor {
+      color: var(--initiative);
+      font-weight: 500;
+    }
+    .empty-state {
+      padding: 2rem 1.25rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .initiative-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: var(--space);
+    }
+    .initiative-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s;
+      cursor: grab;
+    }
+    .initiative-card:active {
+      cursor: grabbing;
+    }
+    .initiative-card.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+    .initiative-card.drag-over {
+      border-color: var(--accent);
+      background: var(--surface-hover);
+      transform: scale(1.02);
+    }
+    .initiative-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-dim);
+    }
+    .initiative-card .initiative-icon {
+      width: 32px;
+      height: 32px;
+    }
+    .initiative-card--nolink {
+      cursor: default;
+    }
+    /* Initiative card icon wrapper with edit button */
+    .initiative-icon-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .initiative-icon-edit {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .initiative-icon-edit svg {
+      width: 12px;
+      height: 12px;
+    }
+    .initiative-icon-wrap:hover .initiative-icon-edit {
+      opacity: 1;
+    }
+    .initiative-icon-edit:hover {
+      background: var(--accent);
+    }
+    /* Placeholder/loading state for new initiatives */
+    .initiative-card--creating {
+      border-style: dashed;
+      animation: initiative-creating-pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes initiative-creating-pulse {
+      0% { border-color: var(--border); }
+      100% { border-color: var(--accent); }
+    }
+    .initiative-icon-placeholder {
+      width: 32px;
+      height: 32px;
+      background: var(--surface-hover);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+    .initiative-icon-placeholder--loading {
+      animation: icon-loading-spin 1s linear infinite;
+    }
+    @keyframes icon-loading-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .frame-coords-card .card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .frame-coords-card table { font-size: 0.8125rem; }
+    .frame-coords-card th, .frame-coords-card td { padding: 0.35rem 0.5rem; }
+    .frame-coords-card input[type="number"] { width: 4rem; padding: 0.25rem 0.35rem; font-size: 0.8125rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+    .frame-coords-card .frame-coords-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .frame-coords-card .frame-coords-saved { font-size: 0.75rem; color: var(--success); margin-left: 0.5rem; }
+    .frame-coords-preview { width: 60px; height: 64px; overflow: hidden; background: url(/images/chef-run-jump.png) no-repeat; background-color: var(--surface-hover); border-radius: 4px; border: 1px solid var(--border); image-rendering: pixelated; image-rendering: crisp-edges; flex-shrink: 0; }
+
+    /* Responsive styles for narrower widths */
+    @media (max-width: 1400px) {
+      .app {
+        padding: var(--space) 16px 48px;
+      }
+      th, td {
+        padding: 0.6rem 0.75rem;
+      }
+      .checks-container {
+        min-width: 240px;
+        gap: 0.75rem;
+      }
+      .preview-links {
+        gap: 0.25rem;
+      }
+      .preview-link {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.6875rem;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        max-width: 100%;
+        padding: 1rem 12px 40px;
+      }
+      table {
+        font-size: 0.8125rem;
+      }
+      th, td {
+        padding: 0.5rem 0.5rem;
+      }
+      th {
+        font-size: 0.6875rem;
+      }
+      .checks-container {
+        min-width: 200px;
+        gap: 0.5rem;
+      }
+      .initiative-icon {
+        width: 36px;
+        height: 36px;
+      }
+      td code {
+        font-size: 0.75rem;
+        padding: 0.1rem 0.3rem;
+      }
+      .preview-links {
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .preview-link {
+        font-size: 0.625rem;
+        padding: 0.125rem 0.35rem;
+      }
+      .comments-unresolved {
+        white-space: nowrap;
+      }
+      .title-cell {
+        max-width: 160px;
+      }
+      .conflicts-banner {
+        padding: 0.35rem 0.5rem;
+        gap: 0.35rem;
+      }
+      .conflicts-banner__text {
+        font-size: 0.6875rem;
+      }
+      .conflicts-banner__btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.6875rem;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .checks-container {
+        min-width: 180px;
+        gap: 0.35rem;
+      }
+      .check-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+      }
+      .row-merge-btn {
+        padding: 0.2rem 0.35rem;
+        font-size: 0.6875rem;
+      }
+      .repo-cell {
+        font-size: 0.75rem;
+      }
+      .platform-icon svg {
+        width: 14px;
+        height: 14px;
+      }
+      .title-cell {
+        max-width: 140px;
+      }
+      .initiative-with-icon {
+        gap: 0.25rem;
+      }
+      .initiative-icon {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    @media (max-width: 1000px) {
+      th, td {
+        padding: 0.4rem 0.4rem;
+      }
+      .checks-cell {
+        padding: 0.35rem 0.4rem;
+      }
+      .checks-container {
+        min-width: 160px;
+        gap: 0.25rem;
+      }
+      .check-icon-wrap {
+        min-width: 20px;
+      }
+      .preview-link {
+        font-size: 0.5625rem;
+        padding: 0.1rem 0.25rem;
+      }
+      .title-cell {
+        max-width: 120px;
+      }
+      /* Show short "unresolved" count at narrow widths */
+      .comments-full {
+        display: none;
+      }
+      .comments-short {
+        display: inline;
+      }
+      /* Icon headers scale down at narrow widths */
+      .th-icon svg {
+        width: 14px;
+        height: 14px;
+      }
+      .checks-header-icons {
+        gap: 0.25rem;
+      }
+      .comments-unresolved {
+        font-size: 0.75rem;
+      }
+      .conflicts-banner {
+        flex-direction: column;
+        padding: 0.25rem 0.35rem;
+        gap: 0.25rem;
+      }
+      .conflicts-banner__text {
+        font-size: 0.625rem;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .header {
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+      }
+      .logo-img {
+        height: 320px;
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+      }
+      table {
+        font-size: 0.75rem;
+      }
+      th {
+        font-size: 0.625rem;
+        letter-spacing: 0.02em;
+      }
+      th, td {
+        padding: 0.35rem 0.3rem;
+      }
+      .checks-cell {
+        padding: 0.25rem 0.3rem;
+      }
+      .checks-container {
+        min-width: 140px;
+        gap: 0.2rem;
+      }
+      .check-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+      }
+      .initiative-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+      }
+      .initiative-card .initiative-icon {
+        width: 24px;
+        height: 24px;
+      }
+      .initiative-card {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+      }
+      .title-cell {
+        max-width: 100px;
+      }
+      .th-icon svg {
+        width: 12px;
+        height: 12px;
+      }
+      .checks-header-icons {
+        gap: 0.15rem;
+      }
+      td code {
+        font-size: 0.6875rem;
+      }
+      .row-refresh {
+        font-size: 0.875rem;
+        padding: 0.15rem 0.3rem;
+      }
+      .row-merge-btn {
+        padding: 0.15rem 0.25rem;
+        font-size: 0.625rem;
+      }
+      .preview-links {
+        gap: 0.15rem;
+      }
+    }
+
+    @media (max-width: 800px) {
+      .checks-container {
+        min-width: 120px;
+        gap: 0.15rem;
+      }
+      .check-icon {
+        width: 14px;
+        height: 14px;
+        font-size: 8px;
+      }
+      .title-cell {
+        max-width: 80px;
+      }
+      .initiative-icon {
+        width: 24px;
+        height: 24px;
+      }
+      .th-icon svg {
+        width: 11px;
+        height: 11px;
+      }
+      .checks-header-icons {
+        gap: 0.1rem;
+      }
+      .repo-cell {
+        font-size: 0.6875rem;
+      }
+      .platform-icon svg {
+        width: 12px;
+        height: 12px;
+      }
+      .platform-icon {
+        margin-right: 0.2rem;
+      }
+      td code {
+        font-size: 0.625rem;
+        padding: 0.05rem 0.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <a href="/" class="logo-link"><img src="/images/orderup.png" alt="Order Up!" class="logo-img" /></a>
+        <span class="meta" id="updated">—</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div class="unassigned-dropdown" id="unassigned-dropdown">
+          <button type="button" class="unassigned-dropdown__btn" id="unassigned-dropdown-btn" title="PRs without an initiative">
+            <i data-lucide="alert-circle"></i>
+            <span>Unassigned</span>
+            <span class="unassigned-dropdown__badge" id="unassigned-count">0</span>
+          </button>
+          <div class="unassigned-dropdown__menu" id="unassigned-menu">
+            <div class="unassigned-dropdown__empty">No unassigned PRs</div>
+          </div>
+        </div>
+        <button type="button" id="fix-all-issues" class="btn" title="Spawn agents to fix all failed checks and unresolved comments">Fix All Issues</button>
+        <button type="button" id="new-food-project" class="btn" title="Create a new project named after a random food, with generated icon and cloned repos">New food project</button>
+        <button type="button" id="refresh" class="btn btn-primary">Refresh</button>
+      </div>
+    </header>
+
+    <div class="initiative-cards" id="initiative-cards-root" aria-label="Initiatives"></div>
+
+    <section class="section" id="frame-coords-section" aria-label="Chef run/jump frame coordinates" style="display: none;">
+      <div class="card frame-coords-card">
+        <div class="card-header">
+          <span>Chef run/jump frame coordinates</span>
+          <div class="frame-coords-actions">
+            <button type="button" id="frame-coords-load-defaults" class="btn" title="Fill form from code defaults (does not save)">Load defaults</button>
+            <button type="button" id="frame-coords-reset" class="btn">Reset to default</button>
+            <button type="button" id="frame-coords-save" class="btn btn-primary">Save</button>
+            <span class="frame-coords-saved" id="frame-coords-saved-msg" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Frame</th><th>Preview</th><th>X</th><th>Y</th><th>Width</th><th>Height</th></tr>
+            </thead>
+            <tbody id="frame-coords-tbody">
+              <tr data-frame="0"><td>0</td><td><div class="frame-coords-preview" data-frame="0" aria-label="Frame 0 preview"></div></td><td><input type="number" data-frame="0" data-field="x" value="4" /></td><td><input type="number" data-frame="0" data-field="y" value="0" /></td><td><input type="number" data-frame="0" data-field="w" value="550" /></td><td><input type="number" data-frame="0" data-field="h" value="600" /></td></tr>
+              <tr data-frame="1"><td>1</td><td><div class="frame-coords-preview" data-frame="1" aria-label="Frame 1 preview"></div></td><td><input type="number" data-frame="1" data-field="x" value="575" /></td><td><input type="number" data-frame="1" data-field="y" value="0" /></td><td><input type="number" data-frame="1" data-field="w" value="550" /></td><td><input type="number" data-frame="1" data-field="h" value="600" /></td></tr>
+              <tr data-frame="2"><td>2</td><td><div class="frame-coords-preview" data-frame="2" aria-label="Frame 2 preview"></div></td><td><input type="number" data-frame="2" data-field="x" value="1160" /></td><td><input type="number" data-frame="2" data-field="y" value="0" /></td><td><input type="number" data-frame="2" data-field="w" value="550" /></td><td><input type="number" data-frame="2" data-field="h" value="600" /></td></tr>
+              <tr data-frame="3"><td>3</td><td><div class="frame-coords-preview" data-frame="3" aria-label="Frame 3 preview"></div></td><td><input type="number" data-frame="3" data-field="x" value="1695" /></td><td><input type="number" data-frame="3" data-field="y" value="0" /></td><td><input type="number" data-frame="3" data-field="w" value="550" /></td><td><input type="number" data-frame="3" data-field="h" value="600" /></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="chef-animations" id="chef-animations-section" aria-label="Chef animation previews">
+      <div class="chef-animations__header">
+        <span class="chef-animations__title">Chef animations</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" id="chef-reset-defaults" class="btn" title="Restore built-in position defaults for all animations">Reset to defaults</button>
+          <button type="button" id="chef-tweak-toggle" class="btn">Tweak position</button>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="walk" data-frames="4">
+        <span class="chef-animations__label">Walk</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-walk-cycle.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="run" data-frames="4">
+        <span class="chef-animations__label">Run</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-run-cycle.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="idle-attack" data-frames="4">
+        <span class="chef-animations__label">Idle + attack</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-idle-attack.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="idle-bob" data-frames="4">
+        <span class="chef-animations__label">Idle bob</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-idle-bob.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="poses" data-frames="4">
+        <span class="chef-animations__label">Poses</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-poses.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="spatula" data-frames="4">
+        <span class="chef-animations__label">Spatula attack</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-spatula-attack.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="overhead" data-frames="4">
+        <span class="chef-animations__label">Overhead</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-overhead-attack.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="hurt" data-frames="4">
+        <span class="chef-animations__label">Hurt + debris</span>
+        <div class="chef-anim-wrap chef-anim-wrap--4" style="background-image: url(/images/chef-hurt-debris.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-12" /> px</label>
+          <label>W <input type="number" class="chef-frame-width" placeholder="50" /> px</label>
+        </div>
+      </div>
+      <div class="chef-animations__item" data-chef-id="flamethrower" data-frames="3">
+        <span class="chef-animations__label">Flamethrower</span>
+        <div class="chef-anim-wrap chef-anim-wrap--3v" style="background-image: url(/images/chef-flamethrower.png);"></div>
+        <div class="chef-anim-tweak">
+          <span class="frame-btns" aria-label="Frame"></span>
+          <label>X <input type="number" class="chef-offset-x" value="0" /> px</label>
+          <label>Y <input type="number" class="chef-offset-y" value="-88" /> px</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="sprite-preview" id="sprite-preview-section" aria-label="Unified sprite sheet preview">
+      <div class="sprite-preview__header">
+        <span class="sprite-preview__title">Sprite Sheet Preview</span>
+        <span class="sprite-preview__subtitle">chef-sprite-animations.png</span>
+      </div>
+      <div class="sprite-preview__grid">
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Run</span>
+          <div class="chef-sprite chef-sprite--run"></div>
+        </div>
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Idle</span>
+          <div class="chef-sprite chef-sprite--idle"></div>
+        </div>
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Attack</span>
+          <div class="chef-sprite chef-sprite--attack" id="sprite-attack"></div>
+          <button type="button" class="sprite-replay-btn" data-target="sprite-attack" data-class="chef-sprite--attack">Replay</button>
+        </div>
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Jump</span>
+          <div class="chef-sprite chef-sprite--jump" id="sprite-jump"></div>
+          <button type="button" class="sprite-replay-btn" data-target="sprite-jump" data-class="chef-sprite--jump">Replay</button>
+        </div>
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Hurt</span>
+          <div class="chef-sprite chef-sprite--hurt"></div>
+        </div>
+        <div class="sprite-preview__item">
+          <span class="sprite-preview__label">Death</span>
+          <div class="chef-sprite chef-sprite--death" id="sprite-death"></div>
+          <button type="button" class="sprite-replay-btn" data-target="sprite-death" data-class="chef-sprite--death">Replay</button>
+        </div>
+        <div class="sprite-preview__item sprite-preview__item--wide">
+          <span class="sprite-preview__label">Flame</span>
+          <div class="chef-sprite chef-sprite--flame"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="root">
+      <div class="card loading-card">
+        <div class="loading-stage" aria-hidden="true">
+          <p class="loading-stage__title">Checking the kitchen…</p>
+          <div class="loading-stage__food-track">
+            <img src="/images/initiatives/burger.png" alt="" class="loading-stage__food" />
+            <img src="/images/initiatives/fries.png" alt="" class="loading-stage__food" />
+            <img src="/images/initiatives/cola.png" alt="" class="loading-stage__food" />
+            <img src="/images/initiatives/milkshake.png" alt="" class="loading-stage__food" />
+            <img src="/images/initiatives/nuggies.png" alt="" class="loading-stage__food" />
+            <img src="/images/initiatives/sauce.png" alt="" class="loading-stage__food" />
+          </div>
+          <div class="loading-stage__chef" role="img" aria-hidden="true"></div>
+          <div class="loading-stage__ground"></div>
+          <span class="loading-stage__hint"><kbd>W</kbd> to jump</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="section local-section" id="local-section" aria-label="Local branches" style="display:none;">
+      <div class="card">
+        <div class="card-header">Local branches</div>
+        <div id="local-root">
+          <p class="loading">Loading…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section events-section" id="events-section" aria-label="GitHub events" style="display:none;">
+      <div class="card">
+        <div class="card-header">Recent activity</div>
+        <ul class="events-list" id="events-list">
+          <li class="loading">Loading…</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite">
+    <i data-lucide="check-circle"></i>
+    <span id="toast-message">Copied!</span>
+  </div>
+
+  <script>
+    const root = document.getElementById('root');
+    const updated = document.getElementById('updated');
+    const refreshBtn = document.getElementById('refresh');
+    // Cache last known initiatives so they remain visible during loading
+    var INITIATIVES_CACHE_KEY = 'prWatcher_cachedInitiatives';
+    var INITIATIVE_FOCUS_KEY = 'prWatcher_initiativeFocus';
+    var INITIATIVE_ORDER_KEY = 'prWatcher_initiativeOrder';
+    var cachedInitiatives = null;
+    var initiativeFocuses = {};
+    var initiativeOrder = [];
+    // Try to restore from localStorage on page load
+    try {
+      var stored = localStorage.getItem(INITIATIVES_CACHE_KEY);
+      if (stored) cachedInitiatives = JSON.parse(stored);
+    } catch (e) {}
+    try {
+      var storedFocus = localStorage.getItem(INITIATIVE_FOCUS_KEY);
+      if (storedFocus) initiativeFocuses = JSON.parse(storedFocus);
+    } catch (e) {}
+    try {
+      var storedOrder = localStorage.getItem(INITIATIVE_ORDER_KEY);
+      if (storedOrder) initiativeOrder = JSON.parse(storedOrder);
+    } catch (e) {}
+    function getInitiativeFocus(name) {
+      return initiativeFocuses[name] || '';
+    }
+    function setInitiativeFocus(name, focus) {
+      initiativeFocuses[name] = focus;
+      try { localStorage.setItem(INITIATIVE_FOCUS_KEY, JSON.stringify(initiativeFocuses)); } catch (e) {}
+    }
+    function prLink(repo, number) {
+      return 'https://github.com/' + repo + '/pull/' + number;
+    }
+
+    /** Build copyable prompt for Cursor: @handle-pr-checks or @handle-pr-comments with PR number, link, and specific context. */
+    function buildCopyText(repo, number, kind, context) {
+      if (!repo || !number) return '';
+      var link = prLink(repo, number);
+      if (kind === 'comments') {
+        var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
+        return 'Use @handle-pr-comments for PR #' + number + countText + ': ' + link;
+      }
+      // For checks, include which check category is failing
+      var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
+      return 'Use @handle-pr-checks for PR #' + number + checkText + ': ' + link;
+    }
+
+    /** Build rebase command for resolving conflicts */
+    function buildRebaseCommand(branch) {
+      return 'git fetch origin && git rebase origin/main';
+    }
+
+    /** Check if PR has merge conflicts */
+    function hasConflicts(pr) {
+      // mergeable === false is the most reliable indicator of actual conflicts
+      if (pr.mergeable === false) return true;
+      var status = (pr.mergeStateStatus || '').toUpperCase();
+      // DIRTY = has conflicts, CONFLICTING = has conflicts
+      // Note: BLOCKED means merge is blocked (checks, reviews, etc.) - NOT conflicts
+      return status === 'DIRTY' || status === 'CONFLICTING';
+    }
+
+    /** Build conflicts banner HTML when PR has merge conflicts */
+    function buildConflictsBanner(path) {
+      return '<div class="conflicts-banner">' +
+        '<span class="conflicts-banner__text">Branch has conflicts</span>' +
+        '<button type="button" class="conflicts-banner__btn" data-resolve-conflicts data-path="' + escapeAttr(path || '') + '" title="Copy rebase command and open in Cursor">' +
+        'Resolve conflicts' +
+        '</button>' +
+        '</div>';
+    }
+
+    function copyCommand(cmd, message) {
+      if (!cmd) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cmd).then(function() {
+          showToast(message || 'Command copied!');
+        }).catch(function(err) {
+          console.error('Clipboard write failed:', err);
+        });
+      }
+    }
+
+    var toastTimeout = null;
+    function showToast(message) {
+      var toast = document.getElementById('toast');
+      var toastMsg = document.getElementById('toast-message');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = message || 'Copied!';
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toast.classList.add('show');
+      toastTimeout = setTimeout(function() {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function copyToClipboard(text, message) {
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          showToast(message || 'Copied to clipboard!');
+        }).catch(function() {});
+      }
+    }
+
+    function checkCell(status, path, repo, number, category) {
+      var title = category === 'lint' ? 'Lint' : category === 'type' ? 'Type' : category === 'test' ? 'Test' : category === 'e2e' ? 'E2E' : 'Other';
+      if (status === 'success') return '<span class="check-icon pass" title="Pass">✓</span>';
+      if (status === 'failure' && repo != null && number != null) {
+        var cursorUrl = (path && path.trim()) ? ('cursor://file/' + escapeAttr(path)) : '#';
+        return '<a href="' + cursorUrl + '" class="check-icon fail fix-check" data-path="' + escapeAttr(path || '') + '" data-repo="' + escapeHtml(repo) + '" data-number="' + number + '" data-check="' + escapeHtml(category) + '" title="Fix ' + title + (path ? ' (opens Cursor)' : '') + '">✗</a>';
+      }
+      if (status === 'failure') return '<span class="check-icon fail" title="Fail">✗</span>';
+      if (status === 'pending') return '<span class="check-icon pending" title="Pending">◐</span>';
+      return '<span class="check-icon none" title="None">—</span>';
+    }
+    function previewLinks(p) {
+      if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
+      var parts = [];
+      if (p.viewer) parts.push('<a href="' + escapeAttr(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
+      if (p.creator) parts.push('<a href="' + escapeAttr(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
+      if (p.storybook) parts.push('<a href="' + escapeAttr(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+      return '<div class="preview-links">' + parts.join('') + '</div>';
+    }
+    function mergeCell(mergeable, mergeStateStatus) {
+      if (mergeable === true) return '<span class="check-icon pass" title="No conflicts">✓</span>';
+      if (mergeable === false) return '<span class="check-icon fail" title="Has conflicts – resolve before merge">✗</span>';
+      var status = (mergeStateStatus || '').toUpperCase();
+      if (status === 'DIRTY' || status === 'CONFLICTING' || status === 'BLOCKED') {
+        return '<span class="check-icon fail" title="' + escapeAttr(mergeStateStatus || 'Has conflicts') + ' – resolve before merge">✗</span>';
+      }
+      var tip = (mergeStateStatus && status !== 'CLEAN') ? escapeAttr(mergeStateStatus) : 'Unknown';
+      return '<span class="check-icon none" title="' + tip + '">—</span>';
+    }
+    function initiativeIconHtml(name, cacheBust) {
+      if (!name || name === '—') return '';
+      var src = '/images/initiatives/' + escapeAttr(name) + '.png';
+      if (cacheBust) src += '?_t=' + Number(cacheBust);
+      return '<img src="' + src + '" alt="" class="initiative-icon" />';
+    }
+    function getPlatformIcon(repo) {
+      var repoLower = (repo || '').toLowerCase();
+      if (repoLower.includes('-ios') || repoLower.includes('ios')) {
+        return { icon: 'apple', color: '#a1a1aa', label: 'iOS' };
+      }
+      if (repoLower.includes('-android') || repoLower.includes('android')) {
+        return { icon: 'smartphone', color: '#22c55e', label: 'Android' };
+      }
+      if (repoLower.includes('backend') || repoLower.includes('api') || repoLower.includes('server')) {
+        return { icon: 'server', color: '#f97316', label: 'Backend' };
+      }
+      // Default to web for nugs, frontend, web, etc.
+      return { icon: 'globe', color: '#60a5fa', label: 'Web' };
+    }
+    function getPlatformSortOrder(repo) {
+      var repoLower = (repo || '').toLowerCase();
+      // Order: nugs/web (0), backend (1), ios (2), android (3)
+      if (repoLower.includes('nugs') || repoLower.includes('web') || repoLower.includes('frontend')) {
+        return 0;
+      }
+      if (repoLower.includes('backend') || repoLower.includes('api') || repoLower.includes('server')) {
+        return 1;
+      }
+      if (repoLower.includes('-ios') || repoLower.includes('ios')) {
+        return 2;
+      }
+      if (repoLower.includes('-android') || repoLower.includes('android')) {
+        return 3;
+      }
+      return 4; // Other/unknown goes last
+    }
+    function sortPrsByPlatform(prs) {
+      return prs.slice().sort(function(a, b) {
+        return getPlatformSortOrder(a.repo) - getPlatformSortOrder(b.repo);
+      });
+    }
+    function formatRepoName(repo) {
+      // Strip org prefix like "FrontRowXP/"
+      return (repo || '').replace(/^[^\/]+\//, '');
+    }
+    // Global list of available initiatives for the picker dropdown
+    var availableInitiativeNames = [];
+    
+    function buildInitPickerDropdown(pr) {
+      var branch = pr.branch || pr.headRefName || '';
+      var repo = pr.repo || '';
+      var itemsHtml = '';
+      for (var i = 0; i < availableInitiativeNames.length; i++) {
+        var name = availableInitiativeNames[i];
+        itemsHtml += '<div class="init-picker__item" data-init-name="' + escapeAttr(name) + '">' +
+          '<img class="init-picker__item-icon" src="/images/initiatives/' + escapeAttr(name) + '.png" alt="" />' +
+          '<span class="init-picker__item-name">' + escapeHtml(name) + '</span>' +
+        '</div>';
+      }
+      if (!itemsHtml) {
+        itemsHtml = '<div class="init-picker__empty">No initiatives</div>';
+      }
+      return '<div class="init-picker" data-repo="' + escapeAttr(repo) + '" data-branch="' + escapeAttr(branch) + '" data-number="' + (pr.number || '') + '">' +
+        '<button type="button" class="init-picker__btn" title="Select initiative to checkout branch">' +
+          '<span>—</span>' +
+          '<i data-lucide="chevron-down"></i>' +
+        '</button>' +
+        '<div class="init-picker__menu">' + itemsHtml + '</div>' +
+      '</div>';
+    }
+    
+    function buildPrRowCells(pr) {
+      var c = pr.checks || {};
+      var path = (pr.initiativePath && typeof pr.initiativePath === 'string') ? pr.initiativePath : '';
+      var initLabel = (pr.initiativeName && typeof pr.initiativeName === 'string') ? pr.initiativeName : '—';
+      var icon = initiativeIconHtml(initLabel);
+      var initCell;
+      if (initLabel === '—') {
+        // No initiative - show picker dropdown
+        initCell = buildInitPickerDropdown(pr);
+      } else {
+        var initLink = path
+          ? '<a href="cursor://file/' + escapeAttr(path) + '" class="init" title="Open in Cursor">' + escapeHtml(initLabel) + '</a>'
+          : '<span class="check-icon none">' + escapeHtml(initLabel) + '</span>';
+        initCell = icon ? '<span class="initiative-with-icon">' + icon + initLink + '</span>' : initLink;
+      }
+      var commentsContent = pr.unresolved > 0
+        ? '<span class="comments-unresolved">' + pr.unresolved + ' <i data-lucide="message-square-warning"></i></span>'
+        : '<span class="check-icon none">0</span>';
+      var commentsHtml = (path && path.trim())
+        ? '<a href="cursor://file/' + escapeAttr(path) + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="Open in Cursor">' + commentsContent + '</a>'
+        : commentsContent;
+      var hasIssues = pr.unresolved > 0 || c.lint === 'failure' || c.type === 'failure' || c.test === 'failure' || c.e2e === 'failure' || c.other === 'failure' || hasConflicts(pr);
+      // Store issue context as data attributes for the copy command
+      var failingChecks = [];
+      if (c.lint === 'failure') failingChecks.push('lint');
+      if (c.type === 'failure') failingChecks.push('type');
+      if (c.test === 'failure') failingChecks.push('test');
+      if (c.e2e === 'failure') failingChecks.push('e2e');
+      if (c.other === 'failure') failingChecks.push('other');
+      var finishBtn = hasIssues ? '<button type="button" class="finish-him-btn" title="Copy command to fix all issues" data-failing-checks="' + escapeAttr(failingChecks.join(',')) + '" data-unresolved="' + (pr.unresolved || 0) + '" data-has-conflicts="' + (hasConflicts(pr) ? '1' : '0') + '">FINISH HIM</button>' : '';
+      var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a><button type="button" class="row-refresh" title="Refresh this PR">↻</button>' + finishBtn + '</span>';
+      var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path) : '';
+      var checksHtml = '<div class="checks-container">' +
+        '<span class="check-icon-wrap">' + mergeCell(pr.mergeable, pr.mergeStateStatus) + (pr.mergeable === true ? ' <button type="button" class="btn btn-primary row-merge-btn" title="Merge this PR">Merge</button>' : '') + '</span>' +
+        '<span class="check-icon-wrap">' + checkCell(c.lint, path, pr.repo, pr.number, 'lint') + '</span>' +
+        '<span class="check-icon-wrap">' + checkCell(c.type, path, pr.repo, pr.number, 'type') + '</span>' +
+        '<span class="check-icon-wrap">' + checkCell(c.test, path, pr.repo, pr.number, 'test') + '</span>' +
+        '<span class="check-icon-wrap">' + checkCell(c.e2e, path, pr.repo, pr.number, 'e2e') + '</span>' +
+        '<span class="check-icon-wrap">' + checkCell(c.other, path, pr.repo, pr.number, 'other') + '</span>' +
+        conflictsBanner +
+        '</div>';
+      return '<td>' + initCell + '</td>' +
+        '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + (pr.branch ? '<br><code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '</span></td>' +
+        '<td>' + prCell + '</td>' +
+        '<td class="title-cell"><span title="' + escapeAttr(pr.title) + '">' + escapeHtml(pr.title.slice(0, 55)) + (pr.title.length > 55 ? '…' : '') + '</span></td>' +
+        '<td class="checks-cell" colspan="6">' + checksHtml + '</td>' +
+        '<td>' + previewLinks(pr.previews) + '</td>' +
+        '<td>' + commentsHtml + '</td>';
+    }
+
+    function sortInitiativesByOrder(initiatives) {
+      if (!initiativeOrder || initiativeOrder.length === 0) return initiatives;
+      var sorted = initiatives.slice().sort(function(a, b) {
+        var aIdx = initiativeOrder.indexOf(a.name);
+        var bIdx = initiativeOrder.indexOf(b.name);
+        // Items not in order go to the end
+        if (aIdx === -1) aIdx = 999;
+        if (bIdx === -1) bIdx = 999;
+        return aIdx - bIdx;
+      });
+      return sorted;
+    }
+    
+    function saveInitiativeOrder() {
+      var cardsRoot = document.getElementById('initiative-cards-root');
+      if (!cardsRoot) return;
+      var cards = cardsRoot.querySelectorAll('.initiative-card[data-initiative-name]');
+      initiativeOrder = [];
+      cards.forEach(function(card) {
+        var name = card.getAttribute('data-initiative-name');
+        if (name) initiativeOrder.push(name);
+      });
+      try { localStorage.setItem(INITIATIVE_ORDER_KEY, JSON.stringify(initiativeOrder)); } catch (e) {}
+    }
+    
+    function renderInitiativeCards(allInitiatives, newlyCreatedName, keepCached) {
+      var cardsRoot = document.getElementById('initiative-cards-root');
+      if (!cardsRoot) return;
+      // If keepCached is true, don't clear - just return (used during loading)
+      if (keepCached && (!Array.isArray(allInitiatives) || allInitiatives.length === 0)) {
+        return;
+      }
+      if (!Array.isArray(allInitiatives) || allInitiatives.length === 0) {
+        // Only clear if we don't have cached data to show
+        if (!cachedInitiatives || cachedInitiatives.length === 0) {
+          cardsRoot.innerHTML = '';
+        }
+        return;
+      }
+      // Cache the initiatives for showing during loading
+      cachedInitiatives = allInitiatives;
+      try { localStorage.setItem(INITIATIVES_CACHE_KEY, JSON.stringify(allInitiatives)); } catch (e) {}
+      var iconCacheBust = (typeof window.__lastCreatedInitiativeTime === 'number' && newlyCreatedName)
+        ? window.__lastCreatedInitiativeTime
+        : null;
+      // Sort by saved order
+      var sortedInitiatives = sortInitiativesByOrder(allInitiatives);
+      var html = '';
+      for (var i = 0; i < sortedInitiatives.length; i++) {
+        var init = sortedInitiatives[i];
+        var name = (init.name && typeof init.name === 'string') ? init.name : '';
+        var path = (init.path && typeof init.path === 'string') ? init.path.trim() : '';
+        var bust = (iconCacheBust && name === newlyCreatedName) ? iconCacheBust : null;
+        var iconSrc = '/images/initiatives/' + escapeAttr(name) + '.png' + (bust ? '?_t=' + bust : '');
+        var iconWithEdit = '<span class="initiative-icon-wrap">' +
+          '<img src="' + iconSrc + '" alt="" class="initiative-icon" />' +
+          '<button type="button" class="initiative-icon-edit" data-edit-initiative="' + escapeAttr(name) + '" title="Regenerate icon"><i data-lucide="pencil"></i></button>' +
+          '</span>';
+        var label = escapeHtml(name);
+        if (path) {
+          html += '<a href="cursor://file/' + escapeAttr(path) + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Open ' + escapeAttr(name) + ' in Cursor">' + iconWithEdit + '<span>' + label + '</span></a>';
+        } else {
+          html += '<a href="#" class="initiative-card initiative-card--nolink" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Create and open ' + escapeAttr(name) + '">' + iconWithEdit + '<span>' + label + '</span></a>';
+        }
+      }
+      cardsRoot.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    /** Add a placeholder initiative card while creating */
+    function addPlaceholderInitiativeCard(name) {
+      var cardsRoot = document.getElementById('initiative-cards-root');
+      if (!cardsRoot) return;
+      var placeholder = document.createElement('div');
+      placeholder.className = 'initiative-card initiative-card--creating';
+      placeholder.id = 'creating-initiative-' + name;
+      placeholder.innerHTML = '<span class="initiative-icon-placeholder initiative-icon-placeholder--loading">⟳</span><span>' + escapeHtml(name) + '</span>';
+      cardsRoot.insertBefore(placeholder, cardsRoot.firstChild);
+    }
+
+    /** Update placeholder card with the real icon */
+    function updatePlaceholderWithIcon(name, imagePath) {
+      var placeholder = document.getElementById('creating-initiative-' + name);
+      if (!placeholder) return;
+      var iconEl = placeholder.querySelector('.initiative-icon-placeholder');
+      if (iconEl) {
+        var img = document.createElement('img');
+        img.src = imagePath + '?_t=' + Date.now();
+        img.alt = '';
+        img.className = 'initiative-icon';
+        iconEl.parentNode.replaceChild(img, iconEl);
+      }
+      placeholder.classList.remove('initiative-card--creating');
+    }
+
+    /** Remove placeholder card */
+    function removePlaceholderCard(name) {
+      var placeholder = document.getElementById('creating-initiative-' + name);
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.removeChild(placeholder);
+      }
+    }
+
+    function render(data, newlyCreatedName) {
+      renderInitiativeCards(data.allInitiatives || [], newlyCreatedName);
+      // Populate available initiative names for the picker dropdown (exclude "—")
+      availableInitiativeNames = [];
+      if (data.initiatives) {
+        for (var i = 0; i < data.initiatives.length; i++) {
+          var initName = data.initiatives[i].name;
+          if (initName && initName !== '—') {
+            availableInitiativeNames.push(initName);
+          }
+        }
+      }
+      if (data.error) {
+        root.innerHTML = '<div class="card"><p class="error">' + escapeHtml(data.error) + '</p></div>';
+        renderLocal(data.localBranches);
+        loadEvents();
+        return;
+      }
+      updated.textContent = data.updatedAt ? 'Updated ' + new Date(data.updatedAt).toLocaleString() : '—';
+      if (!data.initiatives?.length) {
+        root.innerHTML = '<div class="card"><p class="empty-state">No open PRs.</p></div>';
+      } else {
+      function previewLinks(p) {
+        if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
+        const parts = [];
+        if (p.viewer) parts.push('<a href="' + escapeAttr(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
+        if (p.creator) parts.push('<a href="' + escapeAttr(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
+        if (p.storybook) parts.push('<a href="' + escapeAttr(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+        return '<div class="preview-links">' + parts.join('') + '</div>';
+      }
+      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo</th><th>PR</th><th>Title</th><th colspan="6" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Merge status"><i data-lucide="git-merge"></i></span><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th></tr></thead><tbody>';
+      // Sort initiatives by saved order (same as cards)
+      var sortedTableInitiatives = sortInitiativesByOrder(data.initiatives);
+      for (const init of sortedTableInitiatives) {
+        // Filter out PRs on main/master branch
+        var filteredPrs = (init.prs || []).filter(function(pr) {
+          var branch = (pr.branch || pr.headRefName || '').toLowerCase();
+          return branch !== 'main' && branch !== 'master';
+        });
+        if (filteredPrs.length) {
+          var groupLabel = init.name === '—' ? 'No initiative' : escapeHtml(init.name);
+          var groupIcon = initiativeIconHtml(init.name);
+          var groupCell = groupIcon ? '<span class="initiative-with-icon">' + groupIcon + groupLabel + '</span>' : groupLabel;
+          var focusValue = getInitiativeFocus(init.name);
+          var focusInput = init.name !== '—' 
+            ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(init.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
+            : '';
+          html += '<tr class="initiative-group-header" data-initiative="' + escapeHtml(init.name) + '"><td colspan="12"><div>' + groupCell + focusInput + '</div></td></tr>';
+        }
+        var sortedPrs = sortPrsByPlatform(filteredPrs);
+        for (const pr of sortedPrs) {
+          var conflictsAttr = hasConflicts(pr) ? ' data-has-conflicts="true"' : '';
+          html += '<tr data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(pr.initiativePath || '') + '"' + conflictsAttr + '>' + buildPrRowCells(pr) + '</tr>';
+        }
+      }
+      html += '</tbody></table></div></div>';
+      root.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+      // Update unassigned PRs dropdown
+      updateUnassignedDropdown(data.initiatives);
+      renderLocal(data.localBranches);
+      loadEvents();
+    }
+
+    function updateUnassignedDropdown(initiatives) {
+      var countEl = document.getElementById('unassigned-count');
+      var menuEl = document.getElementById('unassigned-menu');
+      if (!countEl || !menuEl) return;
+      
+      // Find PRs with no initiative (name === '—')
+      var unassignedPrs = [];
+      for (var i = 0; i < (initiatives || []).length; i++) {
+        var init = initiatives[i];
+        if (init.name === '—') {
+          for (var j = 0; j < (init.prs || []).length; j++) {
+            unassignedPrs.push(init.prs[j]);
+          }
+        }
+      }
+      
+      countEl.textContent = unassignedPrs.length;
+      countEl.style.display = unassignedPrs.length > 0 ? '' : 'none';
+      
+      if (unassignedPrs.length === 0) {
+        menuEl.innerHTML = '<div class="unassigned-dropdown__empty">No unassigned PRs</div>';
+        return;
+      }
+      
+      var menuHtml = '';
+      for (var k = 0; k < unassignedPrs.length; k++) {
+        var pr = unassignedPrs[k];
+        var repoShort = (pr.repo || '').split('/').pop() || pr.repo;
+        var branch = pr.branch || pr.headRefName || '';
+        var title = pr.title || 'PR #' + pr.number;
+        menuHtml += '<div class="unassigned-dropdown__item" ' +
+          'data-repo="' + escapeAttr(pr.repo) + '" ' +
+          'data-branch="' + escapeAttr(branch) + '" ' +
+          'data-number="' + pr.number + '">' +
+          '<div class="unassigned-dropdown__item-info">' +
+            '<span class="unassigned-dropdown__item-title" title="' + escapeAttr(title) + '">' + escapeHtml(title) + '</span>' +
+            '<div class="unassigned-dropdown__item-meta">' +
+              '<span class="unassigned-dropdown__item-repo">' + escapeHtml(repoShort) + ' #' + pr.number + '</span>' +
+              (branch ? '<span class="unassigned-dropdown__item-branch">' + escapeHtml(branch) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<button type="button" class="unassigned-dropdown__item-action">Checkout</button>' +
+        '</div>';
+      }
+      menuEl.innerHTML = menuHtml;
+    }
+
+    function renderLocal(localBranches) {
+      var localRoot = document.getElementById('local-root');
+      if (!localRoot) return;
+      var rows = localBranches;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        localRoot.innerHTML = '<p class="empty-state">No local subfolders (backend, nugs, frontrow-creator-ios, frontrow-creator-android) found in initiative folders.</p>';
+        return;
+      }
+      var localHtml = '<div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Subfolder</th><th>Branch</th><th>PR</th><th>Title</th><th>Repo</th></tr></thead><tbody>';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var initPath = (r.path || '').trim();
+        var initLink = initPath
+          ? '<a href="cursor://file/' + escapeAttr(initPath) + '" class="init" title="Open in Cursor">' + escapeHtml(r.initiative) + '</a>'
+          : escapeHtml(r.initiative);
+        var initIcon = initiativeIconHtml(r.initiative);
+        var initCellLocal = initIcon ? '<span class="initiative-with-icon">' + initIcon + initLink + '</span>' : initLink;
+        var prCell = r.prNumber != null
+          ? '<a href="https://github.com/' + escapeHtml(r.repo) + '/pull/' + r.prNumber + '" target="_blank" rel="noopener">#' + r.prNumber + '</a>'
+          : '<span class="check-icon none">—</span>';
+        var titleCell = r.prTitle != null
+          ? '<span title="' + escapeAttr(r.prTitle) + '">' + escapeHtml(r.prTitle.slice(0, 55)) + (r.prTitle.length > 55 ? '…' : '') + '</span>'
+          : '<span class="check-icon none">—</span>';
+        localHtml += '<tr><td>' + initCellLocal + '</td><td>' + escapeHtml(r.subfolder) + '</td><td><code>' + escapeHtml(r.branch) + '</code></td><td>' + prCell + '</td><td>' + titleCell + '</td><td>' + escapeHtml(r.repo) + '</td></tr>';
+      }
+      localHtml += '</tbody></table></div>';
+      localRoot.innerHTML = localHtml;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+    function escapeAttr(s) {
+      return encodeURI(s || '').replace(/[#?]/g, encodeURIComponent);
+    }
+
+    var CHEF_RUN_JUMP_FRAMES_KEY = 'prWatcher_chefRunJumpFrames';
+    var DEFAULT_FRAME_COORDS = {
+      imageWidth: 2200,
+      imageHeight: 600,
+      frames: [
+        { x: 4, y: 0, w: 550, h: 600 },
+        { x: 575, y: 0, w: 550, h: 600 },
+        { x: 1160, y: 0, w: 550, h: 600 },
+        { x: 1695, y: 0, w: 550, h: 600 }
+      ]
+    };
+    function getFrameCoords() {
+      try {
+        var raw = localStorage.getItem(CHEF_RUN_JUMP_FRAMES_KEY);
+        if (!raw) return null;
+        var data = JSON.parse(raw);
+        if (!data || !Array.isArray(data.frames) || data.frames.length < 4) return null;
+        return data;
+      } catch (e) { return null; }
+    }
+    function saveFrameCoords(data) {
+      try {
+        localStorage.setItem(CHEF_RUN_JUMP_FRAMES_KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+    function frameCoordsInit() {
+      var tbody = document.getElementById('frame-coords-tbody');
+      var saveBtn = document.getElementById('frame-coords-save');
+      var resetBtn = document.getElementById('frame-coords-reset');
+      var loadDefaultsBtn = document.getElementById('frame-coords-load-defaults');
+      var savedMsg = document.getElementById('frame-coords-saved-msg');
+      if (!tbody || !saveBtn) return;
+      function fromStorage() {
+        var data = getFrameCoords();
+        if (!data) data = DEFAULT_FRAME_COORDS;
+        return data;
+      }
+      function fillInputs(data) {
+        data.frames.forEach(function(f, i) {
+          ['x', 'y', 'w', 'h'].forEach(function(field) {
+            var el = tbody.querySelector('input[data-frame="' + i + '"][data-field="' + field + '"]');
+            if (el && f[field] != null) el.value = f[field];
+          });
+        });
+      }
+      function updatePreview() {
+        var imgW = DEFAULT_FRAME_COORDS.imageWidth;
+        var imgH = DEFAULT_FRAME_COORDS.imageHeight;
+        var previewHeight = 64;
+        for (var i = 0; i < 4; i++) {
+          var x = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="x"]').value, 10);
+          var y = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="y"]').value, 10);
+          var w = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="w"]').value, 10);
+          var h = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="h"]').value, 10);
+          if (isNaN(x)) x = DEFAULT_FRAME_COORDS.frames[i].x;
+          if (isNaN(y)) y = DEFAULT_FRAME_COORDS.frames[i].y;
+          if (isNaN(w)) w = DEFAULT_FRAME_COORDS.frames[i].w;
+          if (isNaN(h)) h = DEFAULT_FRAME_COORDS.frames[i].h;
+          if (h <= 0) h = 600;
+          var scale = previewHeight / h;
+          var previewEl = tbody.querySelector('.frame-coords-preview[data-frame="' + i + '"]');
+          if (previewEl) {
+            previewEl.style.width = Math.round(w * scale) + 'px';
+            previewEl.style.height = Math.round(previewHeight) + 'px';
+            previewEl.style.backgroundSize = (imgW * scale) + 'px ' + (imgH * scale) + 'px';
+            previewEl.style.backgroundPosition = (-x * scale) + 'px ' + (-y * scale) + 'px';
+          }
+        }
+      }
+      fillInputs(fromStorage());
+      updatePreview();
+      tbody.querySelectorAll('input[data-frame][data-field]').forEach(function(inp) {
+        inp.addEventListener('input', updatePreview);
+        inp.addEventListener('change', updatePreview);
+      });
+      saveBtn.addEventListener('click', function() {
+        var data = { imageWidth: DEFAULT_FRAME_COORDS.imageWidth, imageHeight: DEFAULT_FRAME_COORDS.imageHeight, frames: [] };
+        for (var i = 0; i < 4; i++) {
+          var x = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="x"]').value, 10);
+          var y = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="y"]').value, 10);
+          var w = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="w"]').value, 10);
+          var h = parseInt(tbody.querySelector('input[data-frame="' + i + '"][data-field="h"]').value, 10);
+          if (isNaN(x)) x = DEFAULT_FRAME_COORDS.frames[i].x;
+          if (isNaN(y)) y = DEFAULT_FRAME_COORDS.frames[i].y;
+          if (isNaN(w)) w = DEFAULT_FRAME_COORDS.frames[i].w;
+          if (isNaN(h)) h = DEFAULT_FRAME_COORDS.frames[i].h;
+          data.frames.push({ x: x, y: y, w: w, h: h });
+        }
+        saveFrameCoords(data);
+        if (savedMsg) { savedMsg.textContent = 'Saved.'; setTimeout(function() { savedMsg.textContent = ''; }, 2000); }
+      });
+      if (loadDefaultsBtn) loadDefaultsBtn.addEventListener('click', function() {
+        fillInputs(DEFAULT_FRAME_COORDS);
+        updatePreview();
+        if (savedMsg) { savedMsg.textContent = 'Loaded defaults (click Save to apply).'; setTimeout(function() { savedMsg.textContent = ''; }, 3000); }
+      });
+      if (resetBtn) resetBtn.addEventListener('click', function() {
+        saveFrameCoords(DEFAULT_FRAME_COORDS);
+        fillInputs(DEFAULT_FRAME_COORDS);
+        updatePreview();
+        if (savedMsg) { savedMsg.textContent = 'Reset to default.'; setTimeout(function() { savedMsg.textContent = ''; }, 2000); }
+      });
+    }
+    var loadingGameState = { chefY: 0, chefVy: 0, lastFrameTime: 0, state: 'playing', deathStartTime: 0, respawnAt: 0, invincibleUntil: 0 };
+    function initLoadingGame() {
+      var chef = document.querySelector('.loading-stage__chef');
+      if (!chef) return;
+      var foods = document.querySelectorAll('.loading-stage__food');
+      loadingGameState.chefY = 0;
+      loadingGameState.chefVy = 0;
+      loadingGameState.lastFrameTime = performance.now();
+      loadingGameState.state = 'playing';
+      var displayHeight = 64;
+      var blinkInterval = 100;
+      var blinkCount = 4;
+      var respawnDelay = 1000;
+      function loop(now) {
+        if (!document.querySelector('.loading-stage__chef')) return;
+        var c = document.querySelector('.loading-stage__chef');
+
+        if (loadingGameState.state === 'dying') {
+          var elapsed = now - loadingGameState.deathStartTime;
+          var step = Math.floor(elapsed / blinkInterval);
+          if (step < blinkCount) {
+            c.style.opacity = step % 2 === 0 ? '0.35' : '1';
+            c.classList.add('loading-stage__chef--dead');
+          } else {
+            c.style.opacity = '0';
+            c.style.visibility = 'hidden';
+            loadingGameState.state = 'respawning';
+            loadingGameState.respawnAt = now + respawnDelay;
+          }
+          requestAnimationFrame(loop);
+          return;
+        }
+
+        if (loadingGameState.state === 'respawning') {
+          if (now >= loadingGameState.respawnAt) {
+            loadingGameState.state = 'playing';
+            loadingGameState.chefY = 0;
+            loadingGameState.chefVy = 0;
+            loadingGameState.lastFrameTime = now;
+            loadingGameState.invincibleUntil = now + 1800;
+            c.style.opacity = '1';
+            c.style.visibility = 'visible';
+            c.classList.remove('loading-stage__chef--dead');
+          }
+          requestAnimationFrame(loop);
+          return;
+        }
+
+        var dt = Math.min((now - loadingGameState.lastFrameTime) / 16, 4);
+        loadingGameState.chefVy -= 0.55 * dt;
+        loadingGameState.chefY += loadingGameState.chefVy * dt;
+        if (loadingGameState.chefY < 0) {
+          loadingGameState.chefY = 0;
+          loadingGameState.chefVy = 0;
+        }
+        c.style.transform = 'translateY(' + (-loadingGameState.chefY) + 'px)';
+        var runCycle = Math.floor(now / 100) % 2;
+        var frameIndex = loadingGameState.chefY > 0 ? (runCycle === 0 ? 1 : 2) : (runCycle === 0 ? 0 : 3);
+        var coords = getFrameCoords();
+        if (!coords || !coords.frames || !coords.frames[frameIndex]) coords = DEFAULT_FRAME_COORDS;
+        var f = coords.frames[frameIndex];
+        if (f) {
+          var scale = displayHeight / f.h;
+          c.style.width = Math.round(f.w * scale) + 'px';
+          c.style.height = Math.round(f.h * scale) + 'px';
+          c.style.backgroundSize = (coords.imageWidth * scale) + 'px ' + (coords.imageHeight * scale) + 'px';
+          c.style.backgroundPosition = (-f.x * scale) + 'px ' + (-f.y * scale) + 'px';
+          c.style.filter = 'none';
+        }
+        if (loadingGameState.chefY === 0 && now > loadingGameState.invincibleUntil) {
+          for (var i = 0; i < foods.length; i++) {
+            var fr = foods[i].getBoundingClientRect();
+            var cr = c.getBoundingClientRect();
+            if (fr.right >= cr.left && fr.left <= cr.right && fr.bottom >= cr.top && fr.top <= cr.bottom) {
+              loadingGameState.state = 'dying';
+              loadingGameState.deathStartTime = now;
+              break;
+            }
+          }
+        }
+        loadingGameState.lastFrameTime = now;
+        requestAnimationFrame(loop);
+      }
+      if (!window._loadingGameKeydown) {
+        window._loadingGameKeydown = true;
+        document.addEventListener('keydown', function(e) {
+          if (e.code !== 'KeyW') return;
+          if (!document.querySelector('.loading-stage__chef')) return;
+          if (loadingGameState.state !== 'playing') return;
+          e.preventDefault();
+          if (loadingGameState.chefY === 0) loadingGameState.chefVy = 10;
+        });
+      }
+      requestAnimationFrame(loop);
+    }
+    async function load(newlyCreatedName) {
+      // Keep initiative cards visible during loading by rendering from cache
+      if (cachedInitiatives && cachedInitiatives.length > 0) {
+        renderInitiativeCards(cachedInitiatives, null, true);
+      }
+      root.innerHTML = '<div class="card loading-card"><div class="loading-stage" aria-hidden="true"><p class="loading-stage__title">Checking the kitchen…</p><div class="loading-stage__food-track"><img src="/images/initiatives/burger.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/fries.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/cola.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/milkshake.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/nuggies.png" alt="" class="loading-stage__food" /><img src="/images/initiatives/sauce.png" alt="" class="loading-stage__food" /></div><div class="loading-stage__chef" role="img" aria-hidden="true"></div><div class="loading-stage__ground"></div><span class="loading-stage__hint"><kbd>W</kbd> to jump</span></div></div>';
+      initLoadingGame();
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = 'Refreshing…';
+      try {
+        const r = await fetch('/api/status');
+        const data = await r.json();
+        render(data, newlyCreatedName);
+      } catch (e) {
+        render({ error: e.message });
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = 'Refresh';
+      }
+    }
+
+    const eventsList = document.getElementById('events-list');
+    const EVENTS_POLL_MS = 45000;
+
+    function renderEvents(data) {
+      if (!eventsList) return;
+      const parent = eventsList.parentElement;
+      if (data.error) {
+        eventsList.innerHTML = '<li class="error">' + escapeHtml(data.error) + '</li>';
+        return;
+      }
+      const events = data.events || [];
+      if (events.length === 0) {
+        eventsList.innerHTML = '<li class="empty-state">No recent activity for tracked PRs.</li>';
+        return;
+      }
+      eventsList.innerHTML = events.map(function(e) {
+        const time = e.created_at ? new Date(e.created_at).toLocaleString() : '';
+        const summary = escapeHtml(e.summary);
+        const actor = e.actor ? ' by <span class="event-actor">' + escapeHtml(e.actor) + '</span>' : '';
+        const line = escapeHtml(e.repo) + ' <strong>#' + e.number + '</strong> · ' + summary + actor;
+        const url = (e.url || '').trim();
+        const body = url
+          ? '<a href="' + escapeAttr(url) + '" target="_blank" rel="noopener" class="event-body">' + line + '</a>'
+          : '<span class="event-body">' + line + '</span>';
+        return '<li><span class="event-time">' + escapeHtml(time) + '</span>' + body + '</li>';
+      }).join('');
+    }
+
+    async function loadEvents() {
+      if (!eventsList) return;
+      try {
+        const r = await fetch('/api/events');
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          renderEvents({ error: 'Server returned non-JSON. Restart the dashboard server (npm start in app/).' });
+          return;
+        }
+        const data = await r.json();
+        renderEvents(data);
+      } catch (e) {
+        renderEvents({ error: e.message });
+      }
+    }
+
+    // Unassigned PRs dropdown handlers
+    var unassignedDropdown = document.getElementById('unassigned-dropdown');
+    var unassignedBtn = document.getElementById('unassigned-dropdown-btn');
+    if (unassignedDropdown && unassignedBtn) {
+      unassignedBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        unassignedDropdown.classList.toggle('open');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!unassignedDropdown.contains(e.target)) {
+          unassignedDropdown.classList.remove('open');
+        }
+      });
+      
+      // Handle item clicks
+      unassignedDropdown.addEventListener('click', function(e) {
+        var item = e.target.closest('.unassigned-dropdown__item');
+        if (!item) return;
+        
+        var repo = item.getAttribute('data-repo');
+        var branch = item.getAttribute('data-branch');
+        var number = item.getAttribute('data-number');
+        if (!repo || !branch) return;
+        
+        // Build the checkout command
+        var repoShort = repo.split('/').pop() || repo;
+        var checkoutCmd = 'cd ' + repoShort + ' && git fetch origin ' + branch + ' && git checkout ' + branch;
+        
+        // Copy to clipboard
+        copyToClipboard(checkoutCmd, 'Checkout command copied!');
+        
+        // Close dropdown
+        unassignedDropdown.classList.remove('open');
+      });
+    }
+
+    // Initiative focus input handler (delegated to body for dynamic content)
+    document.body.addEventListener('input', function(e) {
+      if (e.target && e.target.classList && e.target.classList.contains('initiative-focus-input')) {
+        var initName = e.target.getAttribute('data-initiative');
+        if (initName) {
+          setInitiativeFocus(initName, e.target.value);
+        }
+      }
+    });
+
+    // Initiative card drag and drop reordering
+    var draggedCard = null;
+    
+    document.body.addEventListener('dragstart', function(e) {
+      var card = e.target.closest('.initiative-card');
+      if (!card) return;
+      draggedCard = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.getAttribute('data-initiative-name'));
+    });
+    
+    document.body.addEventListener('dragend', function(e) {
+      var card = e.target.closest('.initiative-card');
+      if (card) card.classList.remove('dragging');
+      // Remove drag-over from all cards
+      document.querySelectorAll('.initiative-card.drag-over').forEach(function(c) {
+        c.classList.remove('drag-over');
+      });
+      draggedCard = null;
+    });
+    
+    document.body.addEventListener('dragover', function(e) {
+      var card = e.target.closest('.initiative-card');
+      if (!card || card === draggedCard) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // Remove drag-over from other cards
+      document.querySelectorAll('.initiative-card.drag-over').forEach(function(c) {
+        if (c !== card) c.classList.remove('drag-over');
+      });
+      card.classList.add('drag-over');
+    });
+    
+    document.body.addEventListener('dragleave', function(e) {
+      var card = e.target.closest('.initiative-card');
+      if (card && !card.contains(e.relatedTarget)) {
+        card.classList.remove('drag-over');
+      }
+    });
+    
+    document.body.addEventListener('drop', function(e) {
+      var targetCard = e.target.closest('.initiative-card');
+      if (!targetCard || !draggedCard || targetCard === draggedCard) return;
+      e.preventDefault();
+      targetCard.classList.remove('drag-over');
+      
+      var cardsRoot = document.getElementById('initiative-cards-root');
+      if (!cardsRoot) return;
+      
+      // Determine insert position
+      var cards = Array.from(cardsRoot.querySelectorAll('.initiative-card'));
+      var targetIndex = cards.indexOf(targetCard);
+      var draggedIndex = cards.indexOf(draggedCard);
+      
+      // Insert before or after based on position
+      if (draggedIndex < targetIndex) {
+        targetCard.parentNode.insertBefore(draggedCard, targetCard.nextSibling);
+      } else {
+        targetCard.parentNode.insertBefore(draggedCard, targetCard);
+      }
+      
+      // Save new order
+      saveInitiativeOrder();
+      
+      // Also reorder the table rows to match the new card order
+      reorderTableToMatchCards();
+    });
+    
+    // Reorder table initiative groups to match card order
+    function reorderTableToMatchCards() {
+      var cardsRoot = document.getElementById('initiative-cards-root');
+      var tbody = document.querySelector('.pr-table tbody');
+      if (!cardsRoot || !tbody) return;
+      
+      // Get the new order from the cards
+      var cardNames = Array.from(cardsRoot.querySelectorAll('.initiative-card')).map(function(card) {
+        return card.getAttribute('data-initiative-name');
+      });
+      
+      // Find all initiative group headers in the table
+      var initiativeGroups = {}; // name -> [header row, ...PR rows]
+      var currentInit = null;
+      var currentRows = [];
+      
+      Array.from(tbody.querySelectorAll('tr')).forEach(function(row) {
+        if (row.classList.contains('initiative-group-header')) {
+          // Save previous group
+          if (currentInit) {
+            initiativeGroups[currentInit] = currentRows;
+          }
+          // Start new group
+          currentInit = row.getAttribute('data-initiative');
+          currentRows = [row];
+        } else if (currentInit) {
+          currentRows.push(row);
+        }
+      });
+      // Save last group
+      if (currentInit) {
+        initiativeGroups[currentInit] = currentRows;
+      }
+      
+      // Collect all rows in the new order into a fragment
+      var fragment = document.createDocumentFragment();
+      cardNames.forEach(function(name) {
+        if (initiativeGroups[name]) {
+          initiativeGroups[name].forEach(function(row) {
+            fragment.appendChild(row);
+          });
+        }
+      });
+      // Add any remaining groups not in cards (like "No initiative")
+      Object.keys(initiativeGroups).forEach(function(name) {
+        if (cardNames.indexOf(name) === -1) {
+          initiativeGroups[name].forEach(function(row) {
+            fragment.appendChild(row);
+          });
+        }
+      });
+      
+      // Replace tbody contents with the reordered rows
+      while (tbody.firstChild) {
+        tbody.removeChild(tbody.firstChild);
+      }
+      tbody.appendChild(fragment);
+    }
+
+    // Initiative picker dropdown handlers (delegated to body for dynamic content)
+    document.body.addEventListener('click', function(e) {
+      // Toggle init-picker dropdown
+      var pickerBtn = e.target.closest('.init-picker__btn');
+      if (pickerBtn) {
+        e.stopPropagation();
+        var picker = pickerBtn.closest('.init-picker');
+        // Close all other init-pickers
+        document.querySelectorAll('.init-picker.open').forEach(function(p) {
+          if (p !== picker) p.classList.remove('open');
+        });
+        picker.classList.toggle('open');
+        return;
+      }
+      
+      // Handle init-picker item click
+      var pickerItem = e.target.closest('.init-picker__item');
+      if (pickerItem) {
+        e.stopPropagation();
+        var picker = pickerItem.closest('.init-picker');
+        var initName = pickerItem.getAttribute('data-init-name');
+        var repo = picker.getAttribute('data-repo');
+        var branch = picker.getAttribute('data-branch');
+        
+        if (!initName || !repo || !branch) {
+          picker.classList.remove('open');
+          return;
+        }
+        
+        // Build checkout command that goes to the initiative folder and checks out the branch
+        var repoShort = repo.split('/').pop() || repo;
+        var checkoutCmd = 'cd ~/Projects/' + initName + '/' + repoShort + ' && git fetch origin ' + branch + ' && git checkout ' + branch;
+        
+        // Copy to clipboard
+        copyToClipboard(checkoutCmd, 'Checkout command copied for ' + initName + '!');
+        
+        // Close dropdown
+        picker.classList.remove('open');
+        return;
+      }
+      
+      // Close all init-pickers when clicking outside
+      if (!e.target.closest('.init-picker')) {
+        document.querySelectorAll('.init-picker.open').forEach(function(p) {
+          p.classList.remove('open');
+        });
+      }
+    });
+
+    refreshBtn.addEventListener('click', function() {
+      load();
+      loadEvents();
+    });
+
+    var newFoodProjectBtn = document.getElementById('new-food-project');
+    if (newFoodProjectBtn) {
+      newFoodProjectBtn.addEventListener('click', async function() {
+        newFoodProjectBtn.disabled = true;
+        newFoodProjectBtn.textContent = 'Starting...';
+        
+        var placeholderName = null;
+        var pollInterval = null;
+        
+        try {
+          // Start the async creation - returns immediately with name
+          var createRes = await fetch('/api/create-food-project', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }
+          });
+          var createData = await createRes.json();
+          
+          if (!createRes.ok || !createData.name) {
+            throw new Error(createData.error || 'Could not start creation');
+          }
+          
+          placeholderName = createData.name;
+          
+          // Immediately add placeholder card with the name
+          addPlaceholderInitiativeCard(placeholderName);
+          newFoodProjectBtn.textContent = 'Generating icon...';
+          
+          // Poll for status updates
+          async function pollStatus() {
+            try {
+              var statusRes = await fetch('/api/creation-status/' + encodeURIComponent(placeholderName));
+              if (!statusRes.ok) {
+                return; // Job not found, keep polling
+              }
+              var status = await statusRes.json();
+              
+              // Update button text with current step
+              newFoodProjectBtn.textContent = status.step || 'Working...';
+              
+              // Update placeholder with progress
+              var placeholder = document.getElementById('creating-initiative-' + placeholderName);
+              if (placeholder) {
+                var progressEl = placeholder.querySelector('.initiative-icon-placeholder');
+                if (progressEl && status.progress) {
+                  progressEl.textContent = status.progress + '%';
+                }
+                // If we have an image, show it
+                if (status.image) {
+                  updatePlaceholderWithIcon(placeholderName, status.image);
+                }
+              }
+              
+              // Check if complete or failed
+              if (status.status === 'complete') {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                
+                window.__lastCreatedInitiativeName = placeholderName;
+                window.__lastCreatedInitiativeTime = Date.now();
+                setTimeout(function() {
+                  window.__lastCreatedInitiativeName = null;
+                  window.__lastCreatedInitiativeTime = null;
+                }, 15000);
+                
+                removePlaceholderCard(placeholderName);
+                await load(placeholderName);
+                loadEvents();
+                showToast('Created ' + placeholderName + '!');
+                
+                newFoodProjectBtn.disabled = false;
+                newFoodProjectBtn.textContent = 'New food project';
+              } else if (status.status === 'failed') {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                
+                removePlaceholderCard(placeholderName);
+                alert('Creation failed: ' + (status.error || 'Unknown error'));
+                
+                newFoodProjectBtn.disabled = false;
+                newFoodProjectBtn.textContent = 'New food project';
+              }
+            } catch (pollErr) {
+              console.error('Poll error:', pollErr);
+            }
+          }
+          
+          // Start polling every 500ms for real-time updates
+          pollInterval = setInterval(pollStatus, 500);
+          pollStatus(); // Run immediately
+          
+        } catch(err) {
+          if (pollInterval) clearInterval(pollInterval);
+          if (placeholderName) removePlaceholderCard(placeholderName);
+          alert('Failed to create project: ' + (err && err.message ? err.message : 'network error'));
+          newFoodProjectBtn.disabled = false;
+          newFoodProjectBtn.textContent = 'New food project';
+        }
+      });
+    }
+
+    var fixAllBtn = document.getElementById('fix-all-issues');
+    if (fixAllBtn) {
+      fixAllBtn.addEventListener('click', function() {
+        fixAllBtn.disabled = true;
+        fixAllBtn.textContent = 'Scanning...';
+        fetch('/api/fix-all-issues', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+          .then(function(r) {
+            var ct = (r.headers.get('content-type') || '').toLowerCase();
+            if (!ct.includes('application/json')) {
+              return r.text().then(function() {
+                return { ok: false, data: { error: 'Server returned a non-JSON response.' } };
+              });
+            }
+            return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+          })
+          .then(function(result) {
+            if (result.ok && result.data) {
+              var msg = result.data.message || 'Done';
+              var spawnedCount = (result.data.spawned || []).length;
+              var conflictsCount = (result.data.conflicts || []).length;
+              if (spawnedCount === 0 && conflictsCount === 0) {
+                showToast('All PRs are clean!');
+              } else {
+                showToast(msg);
+                // If there are conflicts, show alert with details
+                if (conflictsCount > 0) {
+                  var conflictPRs = result.data.conflicts.map(function(c) {
+                    return c.repo + ' #' + c.number;
+                  }).join('\n');
+                  alert('PRs with conflicts (need manual resolution):\n\n' + conflictPRs);
+                }
+              }
+            } else {
+              alert(result.data && result.data.error ? result.data.error : 'Failed to fix issues');
+            }
+          })
+          .catch(function(err) {
+            alert('Failed: ' + (err && err.message ? err.message : 'network error'));
+          })
+          .finally(function() {
+            fixAllBtn.disabled = false;
+            fixAllBtn.textContent = 'Fix All Issues';
+          });
+      });
+    }
+
+    document.body.addEventListener('click', function(e) {
+      // Handle sprite animation replay buttons
+      var replayBtn = e.target && e.target.closest ? e.target.closest('.sprite-replay-btn') : null;
+      if (replayBtn) {
+        var targetId = replayBtn.getAttribute('data-target');
+        var animClass = replayBtn.getAttribute('data-class');
+        var targetEl = document.getElementById(targetId);
+        if (targetEl && animClass) {
+          targetEl.classList.remove(animClass);
+          void targetEl.offsetWidth; // Force reflow
+          targetEl.classList.add(animClass);
+        }
+        return;
+      }
+
+      // Handle initiative icon edit button
+      var editBtn = e.target && e.target.closest ? e.target.closest('.initiative-icon-edit') : null;
+      if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var initName = editBtn.getAttribute('data-edit-initiative');
+        if (!initName) return;
+        var initiativeCard = editBtn.closest('.initiative-card');
+        if (!initiativeCard) return;
+        if (!confirm('Regenerate icon for "' + initName + '"?')) return;
+        
+        editBtn.disabled = true;
+        initiativeCard.style.pointerEvents = 'none';
+        initiativeCard.setAttribute('aria-busy', 'true');
+        var iconEl = initiativeCard.querySelector('.initiative-icon');
+        if (iconEl) iconEl.style.opacity = '0.4';
+        
+        fetch('/api/regenerate-initiative-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: initName })
+        })
+          .then(function(r) {
+            var ct = (r.headers.get('content-type') || '').toLowerCase();
+            if (!ct.includes('application/json')) {
+              return r.text().then(function() {
+                return { ok: false, data: { error: 'Server returned a non-JSON response.' } };
+              });
+            }
+            return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+          })
+          .then(function(result) {
+            if (result.ok && result.data && result.data.image) {
+              if (iconEl) iconEl.src = result.data.image + '?_t=' + Date.now();
+              showToast('Icon regenerated!');
+            } else {
+              alert(result.data && result.data.error ? result.data.error : 'Could not regenerate icon');
+            }
+          })
+          .catch(function(err) {
+            alert('Failed: ' + (err && err.message ? err.message : 'network error'));
+          })
+          .finally(function() {
+            editBtn.disabled = false;
+            initiativeCard.style.pointerEvents = '';
+            initiativeCard.removeAttribute('aria-busy');
+            if (iconEl) iconEl.style.opacity = '';
+          });
+        return;
+      }
+
+      // Handle branch name copy
+      var branchEl = e.target && e.target.closest ? e.target.closest('.branch-name') : null;
+      if (branchEl) {
+        var branch = branchEl.getAttribute('data-branch');
+        if (branch) {
+          e.preventDefault();
+          e.stopPropagation();
+          copyToClipboard(branch, 'Branch copied!');
+        }
+        return;
+      }
+
+      var initiativeCard = e.target && e.target.closest ? e.target.closest('a.initiative-card') : null;
+      if (initiativeCard) {
+        var initName = initiativeCard.getAttribute('data-initiative-name');
+        if (initName) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Triple-click detection: regenerate image (legacy - edit button is preferred)
+          if (e.detail === 3) {
+            if (!confirm('Regenerate image for "' + initName + '"?')) return;
+            initiativeCard.style.pointerEvents = 'none';
+            initiativeCard.setAttribute('aria-busy', 'true');
+            var iconEl = initiativeCard.querySelector('.initiative-icon');
+            if (iconEl) iconEl.style.opacity = '0.4';
+            fetch('/api/regenerate-initiative-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: initName })
+            })
+              .then(function(r) {
+                var ct = (r.headers.get('content-type') || '').toLowerCase();
+                if (!ct.includes('application/json')) {
+                  return r.text().then(function() {
+                    return { ok: false, data: { error: 'Server returned a non-JSON response.' } };
+                  });
+                }
+                return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+              })
+              .then(function(result) {
+                initiativeCard.style.pointerEvents = '';
+                initiativeCard.removeAttribute('aria-busy');
+                if (iconEl) iconEl.style.opacity = '';
+                if (result.ok && result.data && result.data.image) {
+                  // Update the image with cache-busting
+                  if (iconEl) iconEl.src = result.data.image + '?_t=' + Date.now();
+                  showToast('Image regenerated!');
+                } else {
+                  alert(result.data && result.data.error ? result.data.error : 'Could not regenerate image');
+                }
+              })
+              .catch(function(err) {
+                initiativeCard.style.pointerEvents = '';
+                initiativeCard.removeAttribute('aria-busy');
+                if (iconEl) iconEl.style.opacity = '';
+                alert('Failed: ' + (err && err.message ? err.message : 'network error'));
+              });
+            return;
+          }
+          // Single click: open initiative folder
+          initiativeCard.style.pointerEvents = 'none';
+          initiativeCard.setAttribute('aria-busy', 'true');
+          fetch('/api/ensure-initiative-folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: initName })
+          })
+            .then(function(r) {
+              var ct = (r.headers.get('content-type') || '').toLowerCase();
+              if (!ct.includes('application/json')) {
+                return r.text().then(function() {
+                  return { ok: false, data: { error: 'Server returned a non-JSON response. Restart the dashboard server (npm start in app/).' } };
+                });
+              }
+              return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+            })
+            .then(function(result) {
+              if (result.ok && result.data && result.data.path) {
+                window.location.href = 'cursor://file/' + result.data.path;
+              } else {
+                initiativeCard.style.pointerEvents = '';
+                initiativeCard.removeAttribute('aria-busy');
+                alert(result.data && result.data.error ? result.data.error : 'Could not open initiative folder');
+              }
+            })
+            .catch(function(err) {
+              initiativeCard.style.pointerEvents = '';
+              initiativeCard.removeAttribute('aria-busy');
+              alert('Failed: ' + (err && err.message ? err.message : 'network error'));
+            });
+          return;
+        }
+      }
+      var mergeBtn = e.target && e.target.closest ? e.target.closest('button.row-merge-btn') : null;
+      if (mergeBtn && !mergeBtn.disabled) {
+        var row = mergeBtn.closest('tr[data-repo][data-number]');
+        if (!row) return;
+        var repo = row.getAttribute('data-repo');
+        var num = row.getAttribute('data-number');
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        mergeBtn.disabled = true;
+        mergeBtn.textContent = '…';
+        fetch('/api/merge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo: repo, number: parseInt(num, 10) })
+        })
+          .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+          .then(function(result) {
+            if (result.ok && result.data.merged) {
+              load();
+              loadEvents();
+            } else {
+              mergeBtn.disabled = false;
+              mergeBtn.textContent = 'Merge';
+              alert(result.data && result.data.error ? result.data.error : 'Merge failed');
+            }
+          })
+          .catch(function(err) {
+            mergeBtn.disabled = false;
+            mergeBtn.textContent = 'Merge';
+            alert('Merge failed: ' + (err && err.message ? err.message : 'network error'));
+          });
+        return;
+      }
+      // FINISH HIM button handler - copies command with all issues
+      var finishBtn = e.target && e.target.closest ? e.target.closest('button.finish-him-btn') : null;
+      if (finishBtn && !finishBtn.disabled) {
+        var row = finishBtn.closest('tr[data-repo][data-number]');
+        if (!row) return;
+        var repo = row.getAttribute('data-repo');
+        var num = row.getAttribute('data-number');
+        var path = row.getAttribute('data-path') || '';
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Get issue context from button data attributes
+        var failingChecks = (finishBtn.getAttribute('data-failing-checks') || '').split(',').filter(Boolean);
+        var unresolved = parseInt(finishBtn.getAttribute('data-unresolved') || '0', 10);
+        var hasConflictsFlag = finishBtn.getAttribute('data-has-conflicts') === '1';
+        
+        // Build comprehensive command
+        var link = prLink(repo, num);
+        var issues = [];
+        if (failingChecks.length > 0) {
+          issues.push('failing checks: ' + failingChecks.join(', '));
+        }
+        if (unresolved > 0) {
+          issues.push(unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : ''));
+        }
+        if (hasConflictsFlag) {
+          issues.push('merge conflicts');
+        }
+        var issuesSummary = issues.length > 0 ? ' (' + issues.join('; ') + ')' : '';
+        var cmd = 'Fix all issues on PR #' + num + issuesSummary + ': ' + link;
+        if (failingChecks.length > 0) {
+          cmd += '\n\nUse @handle-pr-checks to fix the failing ' + failingChecks.join(', ') + ' check' + (failingChecks.length > 1 ? 's' : '') + '.';
+        }
+        if (unresolved > 0) {
+          cmd += '\n\nUse @handle-pr-comments to address the ' + unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : '') + '.';
+        }
+        if (hasConflictsFlag) {
+          cmd += '\n\nResolve merge conflicts with: git fetch origin && git rebase origin/main';
+        }
+        
+        // Copy and show feedback
+        copyCommand(cmd, 'All issues command copied!');
+        finishBtn.textContent = 'COPIED!';
+        setTimeout(function() {
+          finishBtn.textContent = 'FINISH HIM';
+        }, 1500);
+        
+        // Open in Cursor if path available
+        if (path && path.trim()) {
+          window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        }
+        return;
+      }
+      var refreshBtn = e.target && e.target.closest ? e.target.closest('button.row-refresh') : null;
+      if (refreshBtn) {
+        var row = refreshBtn.closest('tr[data-repo][data-number]');
+        if (!row) return;
+        var repo = row.getAttribute('data-repo');
+        var num = row.getAttribute('data-number');
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = '…';
+        fetch('/api/pr?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.pr) {
+              row.innerHTML = buildPrRowCells(data.pr);
+              if (typeof lucide !== 'undefined') lucide.createIcons();
+              if (hasConflicts(data.pr)) {
+                row.setAttribute('data-has-conflicts', 'true');
+              } else {
+                row.removeAttribute('data-has-conflicts');
+              }
+            }
+          })
+          .catch(function() {})
+          .finally(function() {
+            refreshBtn.disabled = false;
+            refreshBtn.textContent = '↻';
+          });
+        return;
+      }
+      var a = e.target && e.target.closest ? e.target.closest('a.fix-check') : null;
+      if (a) {
+        var path = a.getAttribute('data-path');
+        var repo = a.getAttribute('data-repo');
+        var num = a.getAttribute('data-number');
+        var check = a.getAttribute('data-check');
+        if (repo && num) {
+          e.preventDefault();
+          copyCommand(buildCopyText(repo, num, 'checks', { check: check }), 'Checks command copied!');
+          var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
+          if (path && path.trim()) body.path = path.trim();
+          fetch('/api/fix-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            keepalive: true
+          }).catch(function() {});
+          if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        }
+        return;
+      }
+      var commentsLink = e.target && e.target.closest ? e.target.closest('a.comments-link') : null;
+      if (commentsLink) {
+        var row = commentsLink.closest('tr[data-repo][data-number]');
+        if (row) {
+          var repo = row.getAttribute('data-repo');
+          var num = row.getAttribute('data-number');
+          var path = row.getAttribute('data-path') || '';
+          var unresolved = parseInt(commentsLink.getAttribute('data-unresolved') || '0', 10);
+          e.preventDefault();
+          e.stopPropagation();
+          copyCommand(buildCopyText(repo, num, 'comments', { unresolved: unresolved }), 'Comments command copied!');
+          if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        }
+        return;
+      }
+      var resolveBtn = e.target && e.target.closest ? e.target.closest('button[data-resolve-conflicts]') : null;
+      if (resolveBtn) {
+        var path = resolveBtn.getAttribute('data-path') || '';
+        e.preventDefault();
+        e.stopPropagation();
+        copyCommand(buildRebaseCommand(), 'Rebase command copied!');
+        if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        return;
+      }
+    });
+
+    const CHEF_TWEAK_STORAGE = 'pr-dashboard-chef-tweak';
+    const CHEF_TWEAK_MODE_KEY = 'pr-dashboard-chef-tweak-mode';
+
+    function chefTweakGetStored() {
+      try {
+        var raw = localStorage.getItem(CHEF_TWEAK_STORAGE);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+    function chefTweakSaveStored(obj) {
+      try {
+        localStorage.setItem(CHEF_TWEAK_STORAGE, JSON.stringify(obj));
+      } catch (e) {}
+    }
+    function chefTweakApplyToWrap(wrap, id, frames, data) {
+      var d = data || {};
+      var frameIndex = Math.max(0, Math.min(parseInt(d.frameIndex, 10) || 0, Math.max(0, frames - 1)));
+      var fo = d.frameOffsets && d.frameOffsets[String(frameIndex)];
+      var x = fo && fo.xOffset != null ? parseInt(fo.xOffset, 10) : parseInt(d.xOffset, 10);
+      var y = fo && fo.yOffset != null ? parseInt(fo.yOffset, 10) : parseInt(d.yOffset, 10);
+      if (isNaN(x)) x = 0;
+      if (isNaN(y)) y = (id === 'flamethrower') ? -88 : -12;
+      var defaultW = id === 'flamethrower' ? 127 : frames === 4 ? 50 : frames === 2 ? 100 : 67;
+      var w = d.frameWidth != null && d.frameWidth !== '' ? parseInt(d.frameWidth, 10) : null;
+      if (w == null || isNaN(w)) w = defaultW;
+      wrap.style.setProperty('--frame-index', String(frameIndex));
+      wrap.style.setProperty('--x-offset', x + 'px');
+      wrap.style.setProperty('--y-offset', y + 'px');
+      wrap.style.setProperty('--frame-width', w + 'px');
+      for (var f = 0; f < frames; f++) {
+        var pf = d.frameOffsets && d.frameOffsets[String(f)];
+        var xf = pf && pf.xOffset != null ? parseInt(pf.xOffset, 10) : (d.xOffset != null ? parseInt(d.xOffset, 10) : 0);
+        var yf = pf && pf.yOffset != null ? parseInt(pf.yOffset, 10) : (d.yOffset != null ? parseInt(d.yOffset, 10) : (id === 'flamethrower' ? -88 : -12));
+        if (isNaN(xf)) xf = 0;
+        if (isNaN(yf)) yf = (id === 'flamethrower') ? -88 : -12;
+        wrap.style.setProperty('--x-' + f, xf + 'px');
+        wrap.style.setProperty('--y-' + f, yf + 'px');
+      }
+      return { frameIndex: frameIndex, xOffset: x, yOffset: y, frameWidth: w };
+    }
+    function chefTweakInit() {
+      var section = document.getElementById('chef-animations-section');
+      var toggleBtn = document.getElementById('chef-tweak-toggle');
+      if (!section) return;
+      var stored = chefTweakGetStored();
+      var walkDefaults = { '0': { xOffset: -27, yOffset: -12 }, '1': { xOffset: -26, yOffset: -12 }, '2': { xOffset: -24, yOffset: -12 }, '3': { xOffset: -26, yOffset: -12 } };
+      var defaultFrameOffsets4 = { '0': { xOffset: 10, yOffset: -12 }, '1': { xOffset: 10, yOffset: -12 }, '2': { xOffset: 10, yOffset: -12 }, '3': { xOffset: 10, yOffset: -12 } };
+      stored.walk = stored.walk || {};
+      stored.walk.frameOffsets = stored.walk.frameOffsets || walkDefaults;
+      ['run', 'idle-attack', 'idle-bob', 'poses', 'spatula', 'overhead', 'hurt'].forEach(function(id) {
+        stored[id] = stored[id] || {};
+        stored[id].frameOffsets = stored[id].frameOffsets || defaultFrameOffsets4;
+      });
+      stored.flamethrower = stored.flamethrower || {};
+      stored.flamethrower.frameOffsets = stored.flamethrower.frameOffsets || { '0': { xOffset: 40, yOffset: -88 }, '1': { xOffset: 40, yOffset: -88 }, '2': { xOffset: 40, yOffset: -88 } };
+      chefTweakSaveStored(stored);
+      var tweakMode = false;
+      if (toggleBtn) {
+        try {
+          tweakMode = localStorage.getItem(CHEF_TWEAK_MODE_KEY) === '1';
+        } catch (e) {}
+        if (tweakMode) section.classList.add('chef-animations--tweak');
+        toggleBtn.textContent = tweakMode ? 'Done tweaking' : 'Tweak position';
+        toggleBtn.addEventListener('click', function() {
+          tweakMode = !tweakMode;
+          section.classList.toggle('chef-animations--tweak', tweakMode);
+          toggleBtn.textContent = tweakMode ? 'Done tweaking' : 'Tweak position';
+          try { localStorage.setItem(CHEF_TWEAK_MODE_KEY, tweakMode ? '1' : '0'); } catch (e) {}
+        });
+      }
+      var resetBtn = document.getElementById('chef-reset-defaults');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+          stored.walk = stored.walk || {};
+          stored.walk.frameOffsets = walkDefaults;
+          ['run', 'idle-attack', 'idle-bob', 'poses', 'spatula', 'overhead', 'hurt'].forEach(function(id) {
+            stored[id] = stored[id] || {};
+            stored[id].frameOffsets = defaultFrameOffsets4;
+          });
+          stored.flamethrower = stored.flamethrower || {};
+          stored.flamethrower.frameOffsets = { '0': { xOffset: 40, yOffset: -88 }, '1': { xOffset: 40, yOffset: -88 }, '2': { xOffset: 40, yOffset: -88 } };
+          chefTweakSaveStored(stored);
+          items.forEach(function(item) {
+            var id = item.getAttribute('data-chef-id');
+            var frames = Math.max(1, parseInt(item.getAttribute('data-frames'), 10) || 1);
+            var wrap = item.querySelector('.chef-anim-wrap');
+            var tweakDiv = item.querySelector('.chef-anim-tweak');
+            if (!wrap || !id) return;
+            var data = stored[id] || {};
+            chefTweakApplyToWrap(wrap, id, frames, data);
+            var frameIndex = parseInt(wrap.style.getPropertyValue('--frame-index'), 10) || 0;
+            var fo = data.frameOffsets && data.frameOffsets[String(frameIndex)];
+            if (fo) {
+              var xIn = tweakDiv && tweakDiv.querySelector('.chef-offset-x');
+              var yIn = tweakDiv && tweakDiv.querySelector('.chef-offset-y');
+              if (xIn) xIn.value = fo.xOffset != null ? fo.xOffset : 0;
+              if (yIn) yIn.value = fo.yOffset != null ? fo.yOffset : (id === 'flamethrower' ? -88 : -12);
+            }
+          });
+        });
+      }
+      section.addEventListener('click', function(e) {
+        if (e.target.closest('.chef-anim-tweak')) return;
+        var wrap = e.target.closest('.chef-anim-wrap');
+        if (wrap) {
+          var item = wrap.closest('.chef-animations__item');
+          if (item) {
+            var wasFocused = item.classList.contains('chef-animations__item--focused');
+            section.querySelectorAll('.chef-animations__item').forEach(function(i) { i.classList.remove('chef-animations__item--focused'); });
+            if (!wasFocused) item.classList.add('chef-animations__item--focused');
+          }
+          return;
+        }
+        var inSection = e.target.closest('.chef-animations__item');
+        if (!inSection) section.querySelectorAll('.chef-animations__item').forEach(function(i) { i.classList.remove('chef-animations__item--focused'); });
+      });
+      var items = section.querySelectorAll('.chef-animations__item');
+      items.forEach(function(item) {
+        var id = item.getAttribute('data-chef-id');
+        var frames = Math.max(1, parseInt(item.getAttribute('data-frames'), 10) || 1);
+        var wrap = item.querySelector('.chef-anim-wrap');
+        var tweakDiv = item.querySelector('.chef-anim-tweak');
+        if (!wrap || !tweakDiv || !id) return;
+        var data = stored[id] || {};
+        chefTweakApplyToWrap(wrap, id, frames, data);
+        var frameBtns = tweakDiv.querySelector('.frame-btns');
+        if (frameBtns && frames > 1) {
+          for (var f = 0; f < frames; f++) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn';
+            btn.textContent = f;
+            btn.dataset.frame = String(f);
+            if (parseInt(data.frameIndex, 10) === f) btn.classList.add('btn-primary');
+            frameBtns.appendChild(btn);
+          }
+        }
+        var xInput = tweakDiv.querySelector('.chef-offset-x');
+        var yInput = tweakDiv.querySelector('.chef-offset-y');
+        var wInput = tweakDiv.querySelector('.chef-frame-width');
+        function getFrameOffsets(frameIdx) {
+          var fo = (stored[id] || {}).frameOffsets;
+          if (fo && fo[String(frameIdx)] != null) return fo[String(frameIdx)];
+          var d = stored[id] || {};
+          return { xOffset: d.xOffset != null ? d.xOffset : 0, yOffset: d.yOffset != null ? d.yOffset : (id === 'flamethrower' ? -88 : -12) };
+        }
+        var curFrame = parseInt(data.frameIndex, 10) || 0;
+        var curOff = getFrameOffsets(curFrame);
+        if (xInput) xInput.value = (curOff.xOffset != null ? curOff.xOffset : 0);
+        if (yInput) yInput.value = (curOff.yOffset != null ? curOff.yOffset : 0);
+        if (wInput && data.frameWidth != null && data.frameWidth !== '') wInput.value = data.frameWidth;
+        function save() {
+          var next = { frameIndex: 0, xOffset: 0, yOffset: 0 };
+          next.frameIndex = parseInt(wrap.style.getPropertyValue('--frame-index'), 10);
+          if (isNaN(next.frameIndex)) next.frameIndex = 0;
+          next.xOffset = xInput ? parseInt(xInput.value, 10) : 0;
+          next.yOffset = yInput ? parseInt(yInput.value, 10) : 0;
+          if (isNaN(next.xOffset)) next.xOffset = 0;
+          if (isNaN(next.yOffset)) next.yOffset = 0;
+          next.frameOffsets = (stored[id] && stored[id].frameOffsets) ? Object.assign({}, stored[id].frameOffsets) : {};
+          next.frameOffsets[String(next.frameIndex)] = { xOffset: next.xOffset, yOffset: next.yOffset };
+          if (wInput && wInput.value.trim() !== '') {
+            next.frameWidth = parseInt(wInput.value, 10);
+            if (isNaN(next.frameWidth)) delete next.frameWidth;
+          }
+          stored[id] = next;
+          chefTweakSaveStored(stored);
+        }
+        function applyFromInputs() {
+          var d = {
+            frameIndex: parseInt(wrap.style.getPropertyValue('--frame-index'), 10) || 0,
+            xOffset: xInput ? parseInt(xInput.value, 10) : 0,
+            yOffset: yInput ? parseInt(yInput.value, 10) : 0,
+            frameWidth: wInput && wInput.value.trim() !== '' ? parseInt(wInput.value, 10) : null
+          };
+          if (isNaN(d.xOffset)) d.xOffset = 0;
+          if (isNaN(d.yOffset)) d.yOffset = 0;
+          chefTweakApplyToWrap(wrap, id, frames, d);
+          if (frameBtns) {
+            frameBtns.querySelectorAll('button').forEach(function(b) {
+              b.classList.toggle('btn-primary', parseInt(b.dataset.frame, 10) === d.frameIndex);
+            });
+          }
+          save();
+        }
+        if (frameBtns) {
+          frameBtns.querySelectorAll('button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var f = parseInt(btn.dataset.frame, 10);
+              wrap.style.setProperty('--frame-index', String(f));
+              frameBtns.querySelectorAll('button').forEach(function(b) { b.classList.remove('btn-primary'); });
+              btn.classList.add('btn-primary');
+              var fo = getFrameOffsets(f);
+              wrap.style.setProperty('--x-offset', (fo.xOffset != null ? fo.xOffset : 0) + 'px');
+              wrap.style.setProperty('--y-offset', (fo.yOffset != null ? fo.yOffset : 0) + 'px');
+              if (xInput) xInput.value = fo.xOffset != null ? fo.xOffset : 0;
+              if (yInput) yInput.value = fo.yOffset != null ? fo.yOffset : 0;
+              save();
+            });
+          });
+        }
+        if (frames > 1) {
+          var alignBtn = document.createElement('button');
+          alignBtn.type = 'button';
+          alignBtn.className = 'btn chef-align-all-btn';
+          alignBtn.textContent = 'Align all frames';
+          alignBtn.title = 'Copy current frame\u2019s X and Y to every frame so they align the same';
+          alignBtn.addEventListener('click', function() {
+            var x = xInput ? parseInt(xInput.value, 10) : 0;
+            var y = yInput ? parseInt(yInput.value, 10) : 0;
+            if (isNaN(x)) x = 0;
+            if (isNaN(y)) y = 0;
+            stored[id] = stored[id] || {};
+            stored[id].frameOffsets = {};
+            for (var f = 0; f < frames; f++) stored[id].frameOffsets[String(f)] = { xOffset: x, yOffset: y };
+            stored[id].frameIndex = parseInt(wrap.style.getPropertyValue('--frame-index'), 10) || 0;
+            stored[id].xOffset = x;
+            stored[id].yOffset = y;
+            if (wInput && wInput.value.trim() !== '') stored[id].frameWidth = parseInt(wInput.value, 10);
+            chefTweakApplyToWrap(wrap, id, frames, stored[id]);
+            chefTweakSaveStored(stored);
+          });
+          tweakDiv.appendChild(alignBtn);
+        }
+        if (xInput) xInput.addEventListener('input', applyFromInputs);
+        if (yInput) yInput.addEventListener('input', applyFromInputs);
+        if (wInput) wInput.addEventListener('input', applyFromInputs);
+      });
+    }
+
+    // Render cached initiatives immediately on page load (before API fetch)
+    if (cachedInitiatives && cachedInitiatives.length > 0) {
+      renderInitiativeCards(cachedInitiatives, null, true);
+    }
+    load();
+    loadEvents();
+    setInterval(loadEvents, EVENTS_POLL_MS);
+    chefTweakInit();
+    frameCoordsInit();
+    // Initialize toast icon
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  </script>
+</body>
+</html>

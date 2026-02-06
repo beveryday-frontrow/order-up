@@ -1,0 +1,39 @@
+{
+  "image": "/images/chef-sprite-animations.png",
+  "imageWidth": 1088,
+  "imageHeight": 960,
+  "meta": {
+    "version": "1.0",
+    "pixelArt": true,
+    "nativeFacing": "right",
+    "frameSize": { "w": 272, "h": 240 },
+    "physics": { "hitbox": "centered" }
+  },
+  "frames": {
+    "run-0": { "x": 0, "y": 0, "w": 272, "h": 240, "facing": "right" },
+    "run-1": { "x": 272, "y": 0, "w": 272, "h": 240, "facing": "right" },
+    "attack-0": { "x": 544, "y": 0, "w": 272, "h": 240, "facing": "right" },
+    "attack-1": { "x": 816, "y": 0, "w": 272, "h": 240, "facing": "right" },
+    "jump-0": { "x": 0, "y": 240, "w": 272, "h": 240, "facing": "right" },
+    "jump-1": { "x": 272, "y": 240, "w": 272, "h": 240, "facing": "right" },
+    "idle-0": { "x": 544, "y": 240, "w": 272, "h": 240, "facing": "right" },
+    "idle-1": { "x": 816, "y": 240, "w": 272, "h": 240, "facing": "right" },
+    "flame-0": { "x": 0, "y": 480, "w": 544, "h": 240, "facing": "right", "anchorX": 0.25 },
+    "idle-2": { "x": 544, "y": 480, "w": 272, "h": 240, "facing": "right" },
+    "idle-3": { "x": 816, "y": 480, "w": 272, "h": 240, "facing": "right" },
+    "hurt-0": { "x": 0, "y": 720, "w": 272, "h": 240, "facing": "right" },
+    "death-0": { "x": 272, "y": 720, "w": 272, "h": 240, "facing": "right" },
+    "ash-0": { "x": 544, "y": 720, "w": 272, "h": 240, "facing": "none" },
+    "ash-1": { "x": 816, "y": 720, "w": 272, "h": 240, "facing": "none" }
+  },
+  "animations": {
+    "run": { "frames": ["run-0", "run-1"], "frameRate": 10, "loop": true },
+    "jump": { "frames": ["jump-0", "jump-1"], "frameRate": 8, "loop": false },
+    "attack": { "frames": ["attack-0", "attack-1"], "frameRate": 12, "loop": false },
+    "idle": { "frames": ["idle-0", "idle-1", "idle-2", "idle-3"], "frameRate": 6, "loop": true },
+    "flame": { "frames": ["flame-0"], "frameRate": 1, "loop": true },
+    "hurt": { "frames": ["hurt-0"], "frameRate": 1, "loop": false },
+    "death": { "frames": ["hurt-0", "death-0"], "frameRate": 4, "loop": false },
+    "die": { "frames": ["hurt-0", "death-0", "ash-0", "ash-1"], "frameRate": 4, "loop": false }
+  }
+}

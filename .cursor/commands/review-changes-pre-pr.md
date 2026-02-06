@@ -1,0 +1,2 @@
+Check the current branch changes and validate they pass all BUGBOT checks (/nugs/.cursor/BUGBOT.md). If there are issues, address them.
+After all issues are addressed, run `yarn run lint --fix` then `yarn run checks` this will run lint check,type-check, and tests for all the different areas of the code. If any of them have an issue the checks will stop at their current check and we should fix all issues, re-run the failed checks of that area, and then re-run checks. Repeat until all checks pass and then push up changes.

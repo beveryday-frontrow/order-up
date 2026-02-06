@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Cookie (dark chocolate) -->
+  <circle cx="16" cy="16" r="14" fill="#1a0f0a" stroke="#2d1810" stroke-width="1"/>
+  <!-- Cream filling -->
+  <circle cx="16" cy="16" r="9" fill="#f5f0e6"/>
+  <!-- OREO pattern (simplified emboss) -->
+  <circle cx="16" cy="16" r="3" fill="#f5f0e6" stroke="#e8e0d0" stroke-width="0.8"/>
+  <circle cx="16" cy="12" r="1.2" fill="#e8e0d0"/>
+  <circle cx="19.2" cy="14.8" r="1.2" fill="#e8e0d0"/>
+  <circle cx="19.2" cy="17.2" r="1.2" fill="#e8e0d0"/>
+  <circle cx="16" cy="20" r="1.2" fill="#e8e0d0"/>
+  <circle cx="12.8" cy="17.2" r="1.2" fill="#e8e0d0"/>
+  <circle cx="12.8" cy="14.8" r="1.2" fill="#e8e0d0"/>
+</svg>

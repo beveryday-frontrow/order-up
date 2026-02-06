@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sprite frames – reference</title>
+  <style>
+    :root { --bg: #18181b; --surface: #27272a; --text: #fafafa; --text-muted: #a1a1aa; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; background: var(--bg); color: var(--text); }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem; }
+    .legend { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.5rem; padding: 0.75rem; background: var(--surface); border-radius: 8px; max-width: 720px; }
+    .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem; }
+    .frame { background: var(--surface); border: 1px solid #3f3f46; border-radius: 8px; padding: 0.5rem; text-align: center; }
+    .frame img { display: block; width: 128px; height: 128px; object-fit: none; object-position: 0 0; margin: 0 auto 0.25rem; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .frame .label { font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <h1>Sprite frames – full breakdown (8×8, 128×128 px)</h1>
+  <p>Extracted from sprite.png (1024×1024). Each cell is one frame (128×128 px). <a href="/sprite-frames-4x8.html" style="color:#60a5fa">Compare 4×8 grid (256×128)</a></p>
+  <div class="legend">
+    <strong>From sheet description:</strong> Row 0: idle×2, burger in hand, idle×2, IDLE POSE · Row 1: run, jump, run, burger enemy, chef+burger · Row 2: spatula spin, FLIP OUT!, WELL-DONE · Row 3: OUCH!, flex×2, flex+burger, BUN-BELIIVABLE, platform
+  </div>
+  <div class="grid" id="grid"></div>
+  <script>
+    var base = '/images/sprite-frames/';
+    var grid = document.getElementById('grid');
+    for (var row = 0; row < 8; row++) {
+      for (var col = 0; col < 8; col++) {
+        var f = 'r' + row + 'c' + col + '.png';
+        var div = document.createElement('div');
+        div.className = 'frame';
+        div.innerHTML = '<img src="' + base + f + '" alt="r' + row + 'c' + col + '" /><span class="label">r' + row + 'c' + col + '</span>';
+        grid.appendChild(div);
+      }
+    }
+  </script>
+</body>
+</html>

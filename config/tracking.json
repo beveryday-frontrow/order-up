@@ -1,0 +1,103 @@
+{
+  "$schema": "./tracking.schema.json",
+  "initiatives": {
+    "burger": {
+      "path": "/Users/brandonevery/Projects/burger",
+      "description": "",
+      "prs": []
+    },
+    "fries": {
+      "path": "/Users/brandonevery/Projects/fries",
+      "description": "Web CMS experience",
+      "prs": [
+        {
+          "repo": "FrontRowXP/nugs",
+          "number": 3214,
+          "branch": "feature/experience-selector-and-ai-chat-ui"
+        }
+      ]
+    },
+    "cola": {
+      "path": "/Users/brandonevery/Projects/cola",
+      "description": "",
+      "prs": []
+    },
+    "nuggies": {
+      "path": "/Users/brandonevery/Projects/nuggies",
+      "description": "RN Community Chat (Backend, Web, iOS, Android)",
+      "prs": [
+        {
+          "repo": "FrontRowXP/nugs",
+          "number": 3188,
+          "branch": "feat/rn-community-chat"
+        },
+        {
+          "repo": "FrontRowXP/frontrow-creator-ios",
+          "number": 2102,
+          "branch": "asana-1213022693207323/rn-community-chat"
+        },
+        {
+          "repo": "FrontRowXP/frontrow-creator-android",
+          "number": 1530,
+          "branch": "feat/rn-community-chat"
+        }
+      ]
+    },
+    "milkshake": {
+      "path": "/Users/brandonevery/Projects/milkshake",
+      "description": "Stripe (nugs, Backend)",
+      "prs": [
+        {
+          "repo": "FrontRowXP/nugs",
+          "number": 3199,
+          "branch": "feat/user-stripe-management-ui"
+        },
+        {
+          "repo": "FrontRowXP/backend",
+          "number": 4595,
+          "branch": "feat/stripe-use-users-table"
+        }
+      ]
+    },
+    "sauce": {
+      "path": "/Users/brandonevery/Projects/sauce",
+      "description": "",
+      "prs": []
+    },
+    "hotdog": {
+      "path": "/Users/brandonevery/Projects/hotdog",
+      "description": "",
+      "prs": []
+    },
+    "cookie": {
+      "path": "/Users/brandonevery/Projects/cookie",
+      "description": "",
+      "prs": []
+    },
+    "taco": {
+      "path": "/Users/brandonevery/Projects/taco",
+      "description": "",
+      "prs": []
+    },
+    "croissant": {
+      "path": "/Users/brandonevery/Projects/croissant",
+      "description": "",
+      "prs": []
+    },
+    "pizza": {
+      "path": "/Users/brandonevery/Projects/pizza",
+      "description": "",
+      "prs": []
+    }
+  },
+  "repoToSubfolder": {
+    "FrontRowXP/nugs": "nugs",
+    "FrontRowXP/backend": "backend",
+    "FrontRowXP/frontrow-creator-ios": "frontrow-creator-ios",
+    "FrontRowXP/frontrow-creator-android": "frontrow-creator-android",
+    "FrontRowXP/community-chat-api": "community-chat-api",
+    "FrontRowXP/docs": "docs",
+    "FrontRowXP/frontro-protoypes": "frontro-protoypes"
+  },
+  "updatedAt": "2026-02-06T05:31:04.112Z"
+}

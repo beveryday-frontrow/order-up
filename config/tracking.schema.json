@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PR Watcher tracking config",
+  "description": "Which initiative folders manage which PRs and repos",
+  "type": "object",
+  "required": ["initiatives", "repoToSubfolder"],
+  "properties": {
+    "initiatives": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "prs"],
+        "properties": {
+          "path": { "type": "string", "description": "Absolute path to the initiative (Cursor project) folder" },
+          "description": { "type": "string", "description": "Optional label for the initiative" },
+          "prs": {
+            "type": "array",
+            "description": "PRs this folder is responsible for",
+            "items": {
+              "type": "object",
+              "required": ["repo", "number"],
+              "properties": {
+                "repo": { "type": "string", "description": "e.g. FrontRowXP/nugs" },
+                "number": { "type": "integer", "description": "PR number" },
+                "branch": { "type": "string", "description": "Head branch (optional, for display/sync)" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repoToSubfolder": {
+      "type": "object",
+      "description": "GitHub repo full name → subfolder name under each initiative",
+      "additionalProperties": { "type": "string" }
+    },
+    "updatedAt": { "type": ["string", "null"], "format": "date-time" }
+  }
+}
