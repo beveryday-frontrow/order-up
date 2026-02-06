@@ -1,120 +1,289 @@
-# PR Watcher
+# 🍔 Order Up!
 
-Local app that tracks which initiative folders manage which PRs and can run Cursor to fix checks/comments.
+A fun, food-themed PR monitoring dashboard that helps you track and manage pull requests across multiple repositories. Each "initiative" (feature/project) gets its own food-themed icon, and you can monitor check statuses, unresolved comments, and quickly copy commands to fix issues.
 
-**Location:** `~/Projects/pr-watcher` — lives in the Projects folder on purpose so it stays **outside** any single initiative (burger, fries, nuggies, sauce, etc.) and can drive all of them.
+## Features
 
-## Config: `config/tracking.json`
+- **Initiative-based PR grouping** — Organize PRs by project/feature with custom food icons
+- **Real-time status monitoring** — Track lint, type, test, e2e checks and unresolved comments
+- **One-click commands** — Copy fix commands to paste into Cursor
+- **Drag-and-drop reordering** — Prioritize initiatives your way
+- **Auto-generated pixel art icons** — Creates retro Burger Time-style icons via DALL-E
+- **Cursor Skills integration** — Use `@handle-pr-checks` and `@handle-pr-comments` skills
 
-- **initiatives** – Each key (e.g. `nuggies`, `sauce`) is an initiative name. Value:
-  - **path** – Absolute path to that Cursor project folder.
-  - **description** – Optional label (e.g. "Stripe", "RN Community Chat").
-  - **prs** – Array of `{ repo, number, branch? }` that this folder owns.
-- **repoToSubfolder** – Maps GitHub repo (e.g. `FrontRowXP/nugs`) to the subfolder name under each initiative (`nugs`, `backend`, etc.).
+---
 
-## How the app uses it
+## Prerequisites
 
-1. **Lookup PR → folder**  
-   On event for `FrontRowXP/nugs#3199`: find initiative whose `prs` contains that repo+number → use that initiative’s `path` to run Cursor.
+Before setting up Order Up!, make sure you have the following installed:
 
-2. **Lookup folder → PRs**  
-   For "which PRs is nuggies managing?": read `initiatives.nuggies.prs`.
+### 1. Node.js (v18+)
 
-3. **Updating**  
-   - When you assign a new PR to an initiative: append to that initiative’s `prs` and set `updatedAt`.
-   - When a PR is merged/closed: remove from `prs` (or have the app do it when it polls and sees closed).
+```bash
+# Check if installed
+node --version
 
-## Example: add a PR to an initiative
+# Install via Homebrew (macOS)
+brew install node
 
-Edit `config/tracking.json` and add to the right initiative’s `prs`:
+# Or download from https://nodejs.org/
+```
+
+### 2. GitHub CLI (`gh`)
+
+Required for fetching PR data and check statuses.
+
+```bash
+# Check if installed
+gh --version
+
+# Install via Homebrew (macOS)
+brew install gh
+
+# Authenticate with GitHub
+gh auth login
+```
+
+### 3. ImageMagick
+
+Required for removing backgrounds from generated initiative icons.
+
+```bash
+# Check if installed
+magick --version
+
+# Install via Homebrew (macOS)
+brew install imagemagick
+```
+
+### 4. OpenAI API Key (Optional)
+
+Only needed if you want to generate custom initiative icons via DALL-E.
+
+```bash
+# Set in your shell profile (~/.zshrc or ~/.bashrc)
+export OPENAI_API_KEY="sk-your-api-key-here"
+```
+
+Get your API key from: https://platform.openai.com/api-keys
+
+---
+
+## Quick Setup
+
+Run these commands to get up and running:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/beveryday-frontrow/order-up.git
+cd order-up
+
+# 2. Install dependencies for the dashboard app
+cd app && npm install
+
+# 3. Start the dashboard
+npm run dev
+```
+
+Then open **http://localhost:3333** in your browser.
+
+---
+
+## Configuration
+
+### `config/tracking.json`
+
+This file defines your initiatives and which PRs they track:
 
 ```json
-"prs": [
-  { "repo": "FrontRowXP/nugs", "number": 3199, "branch": "feat/user-stripe-management-ui" },
-  { "repo": "FrontRowXP/backend", "number": 4596, "branch": "feat/new-thing" }
-]
+{
+  "initiatives": {
+    "burger": {
+      "path": "/Users/you/Projects/burger",
+      "description": "My awesome feature",
+      "prs": [
+        { "repo": "owner/repo", "number": 123, "branch": "feat/my-feature" }
+      ]
+    }
+  },
+  "repoToSubfolder": {
+    "owner/repo": "subfolder-name"
+  }
+}
 ```
 
-Or have the app support a command like: `assign FrontRowXP/backend#4596 to nuggies`.
+#### Initiative Properties
 
-## Scripts
+| Property | Description |
+|----------|-------------|
+| `path` | Absolute path to the project folder (used for "Open in Cursor" links) |
+| `description` | Optional description shown in the focus input |
+| `prs` | Array of PRs this initiative manages |
 
-From `~/Projects/pr-watcher` (or with paths from there):
+#### PR Properties
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/show-tracking.sh` | Print which initiative folders manage which PRs (from `config/tracking.json`). |
-| `scripts/pull-open-prs.sh` | Report-only: list open PRs for every repo in `repoToSubfolder`; shows which are already tracked. Does not modify config. |
-| `scripts/lib/get-pr-status.sh OWNER REPO NUMBER` | Check one PR: outputs `failing_checks=N unresolved=M`; exit 1 if it needs attention. |
-| `scripts/run-agent-for-pr.sh REPO NUMBER` | Look up initiative for that PR, `cd` to its path, run Cursor `agent` to fix checks and comments. Example: `scripts/run-agent-for-pr.sh FrontRowXP/nugs 3199`. |
-| `scripts/poll-and-fix.sh` | For every tracked PR, if it has failing checks or unresolved comments, run the agent in the owning initiative folder. One agent per initiative at a time (uses `.locks/<initiative>.lock`). |
+| Property | Description |
+|----------|-------------|
+| `repo` | GitHub repo in `owner/repo` format |
+| `number` | PR number |
+| `branch` | Branch name (optional, helps with checkout commands) |
 
-**Dashboard (browser):** A small TS app serves the same PR status in the browser. From `pr-watcher`:
+### Adding a New Initiative
+
+1. **Via the Dashboard:** Click the "+" button, enter a food name, and it will:
+   - Generate a pixel art icon via DALL-E
+   - Create the folder structure
+   - Clone your configured repos into it
+
+2. **Manually:** Add an entry to `config/tracking.json`:
+
+```json
+"taco": {
+  "path": "/Users/you/Projects/taco",
+  "description": "Taco feature",
+  "prs": []
+}
+```
+
+---
+
+## Cursor Skills
+
+Order Up! includes Cursor skills that help AI agents fix PR issues:
+
+### `@handle-pr-checks`
+
+Fetches failing check details and helps fix lint, type, test, or e2e failures.
+
+**Usage:** When a check is failing, click on it to copy a command like:
+```
+Use @handle-pr-checks for PR #123 (failing lint check): https://github.com/owner/repo/pull/123
+```
+
+### `@handle-pr-comments`
+
+Fetches unresolved PR comments and helps address reviewer feedback.
+
+**Usage:** Click on unresolved comments count to copy:
+```
+Use @handle-pr-comments for PR #123 (3 unresolved comments): https://github.com/owner/repo/pull/123
+```
+
+### `@pr-manager`
+
+Dashboard view skill for managing multiple PRs.
+
+---
+
+## MCP Server (Optional)
+
+An MCP server allows Cursor to trigger PR fixes directly:
 
 ```bash
-cd app && npm install && npm start
+# Install and run
+cd mcp-server && npm install
+npx tsx server.ts
 ```
 
-Then open **http://localhost:3333**. Uses `config/tracking.json` and `scripts/lib/get-pr-status.sh` (requires `gh`).
-
-## MCP: trigger Cursor agent from Cursor (or any MCP client)
-
-An MCP server exposes a tool so Cursor (or another MCP client) can trigger the agent for a tracked PR when you ask (e.g. "fix PR FrontRowXP/nugs 3214").
-
-**Run the MCP server** (stdio; Cursor spawns it):
-
-```bash
-cd ~/Projects/pr-watcher/mcp-server && npm install && npx tsx server.ts
-```
-
-**Add to Cursor MCP settings** (e.g. in Cursor → Settings → MCP, or project `.cursor/mcp.json`):
+Add to your Cursor MCP settings (`.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "pr-watcher": {
+    "order-up": {
       "command": "npx",
       "args": ["tsx", "server.ts"],
-      "cwd": "/Users/brandonevery/Projects/pr-watcher/mcp-server"
+      "cwd": "/path/to/order-up/mcp-server"
     }
   }
 }
 ```
 
-**Tool:** `trigger_agent_for_pr(repo, number)` — runs the Cursor agent in the initiative folder that owns that PR (same as `run-agent-for-pr.sh`). Use when GH events come in and you want to fix that PR from Cursor.
+---
 
-## Webhook: trigger agent when GH events come in
+## Scripts
 
-The dashboard app can receive GitHub webhooks and run the agent for the PR in the event (comment, review, etc.) if that PR is tracked.
+| Script | Purpose |
+|--------|---------|
+| `scripts/show-tracking.sh` | Print which initiatives manage which PRs |
+| `scripts/pull-open-prs.sh` | List open PRs for all configured repos |
+| `scripts/run-agent-for-pr.sh REPO NUMBER` | Run Cursor agent to fix a specific PR |
+| `scripts/poll-and-fix.sh` | Check all tracked PRs and fix any with issues |
 
-1. **Expose the app** (e.g. ngrok: `ngrok http 3333`) so GitHub can POST to it.
-2. **GitHub repo → Settings → Webhooks → Add webhook:**
-   - Payload URL: `https://your-host/webhook/github`
-   - Content type: `application/json`
-   - Secret: optional; if set, also set `GITHUB_WEBHOOK_SECRET` in the app env.
-   - Events: e.g. "Let me select individual events" → Issue comments, Pull request reviews, Pushes (optional).
-3. **Start the app** with the same config (and optional `GITHUB_WEBHOOK_SECRET`).
+---
 
-When GitHub sends an event for a tracked PR, the app runs `run-agent-for-pr.sh` for that PR in the background (one agent per event).
+## Environment Variables
 
-**Requirements:** `gh` (GitHub CLI), `jq`, Cursor CLI (`agent`). Install Cursor CLI: `curl https://cursor.com/install -fsS | bash`.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENAI_API_KEY` | OpenAI API key for generating initiative icons | No (icons are optional) |
+| `GITHUB_TOKEN` | GitHub token (uses `gh` auth by default) | No |
+| `PORT` | Dashboard port (default: 3333) | No |
 
-**One-off fix for a PR:**
+---
 
-```bash
-cd ~/Projects/pr-watcher
-./scripts/run-agent-for-pr.sh FrontRowXP/nugs 3199
-```
+## One-Line Setup Script
 
-**Poll once and fix any PR that needs attention:**
-
-```bash
-cd ~/Projects/pr-watcher
-./scripts/poll-and-fix.sh
-```
-
-**Cron or loop to poll every N minutes:**
+Copy and paste this to set everything up at once:
 
 ```bash
-while true; do ./scripts/poll-and-fix.sh; sleep 300; done
+# Full setup (run from anywhere)
+git clone https://github.com/beveryday-frontrow/order-up.git ~/Projects/order-up && \
+cd ~/Projects/order-up/app && \
+npm install && \
+npm run dev
 ```
+
+---
+
+## Troubleshooting
+
+### "gh: command not found"
+
+Install GitHub CLI:
+```bash
+brew install gh && gh auth login
+```
+
+### "magick: command not found"
+
+Install ImageMagick:
+```bash
+brew install imagemagick
+```
+
+### Initiative icons have green backgrounds
+
+The app uses ImageMagick to remove green backgrounds from DALL-E generated images. If this fails:
+
+```bash
+# Manually remove green background from an image
+magick input.png -alpha set -fuzz 30% -fill none -opaque "#00FF00" output.png
+```
+
+### PR data not loading
+
+1. Check that `gh` is authenticated: `gh auth status`
+2. Verify you have access to the repos in your config
+3. Check the terminal for error messages
+
+---
+
+## Development
+
+```bash
+# Run in development mode (auto-restart on changes)
+cd app && npm run dev
+
+# The app watches for changes to server.ts
+```
+
+---
+
+## License
+
+MIT
+
+---
+
+**Made with 🍟 by the Order Up! team**
