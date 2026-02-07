@@ -30,9 +30,21 @@
       --space: 1.5rem;
     }
     * { box-sizing: border-box; }
+    .drag-bar {
+      -webkit-app-region: drag;
+      height: 32px;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      /* Leave space for macOS traffic lights */
+      padding-left: 78px;
+    }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
+      padding-top: 32px;
       min-height: 100vh;
       background: var(--bg);
       color: var(--text);
@@ -53,6 +65,11 @@
       margin-bottom: var(--space);
       padding-bottom: var(--space);
       border-bottom: 1px solid var(--border);
+    }
+    /* Ensure interactive elements in the header area are clickable over the drag bar */
+    .header a, .header button, .header input, .header select,
+    .initiative-card, .initiative-icon-edit {
+      -webkit-app-region: no-drag;
     }
     .header-left {
       display: flex;
@@ -294,19 +311,23 @@
       padding: 0.75rem 1rem;
       border-bottom: 1px solid var(--border);
     }
+    thead { position: relative; z-index: 10; }
     th {
       color: var(--text-muted);
       font-weight: 600;
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      text-align: center;
+      overflow: visible;
       background: var(--surface);
       position: sticky;
       top: 0;
       z-index: 1;
     }
     /* Column widths for Orders on the Grill table */
-    th:first-child, td:first-child { width: 80px; max-width: 100px; }
+    th:first-child, td:first-child { width: 110px; max-width: 130px; text-align: left; }
+    th:nth-child(2) { text-align: left; }
     th:nth-child(2), td:nth-child(2) { width: 45%; min-width: 300px; }
     tbody tr {
       transition: background 0.1s;
@@ -407,10 +428,47 @@
       justify-content: center;
       color: var(--text-muted);
       cursor: help;
+      position: relative;
     }
     .th-icon svg {
       width: 16px;
       height: 16px;
+    }
+    .th-icon::after {
+      content: attr(title);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: #f3f4f6;
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 1000;
+    }
+    .th-icon::before {
+      content: '';
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-bottom-color: #1f2937;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 1000;
+    }
+    .th-icon:hover::after,
+    .th-icon:hover::before {
+      opacity: 1;
     }
     .checks-header-icons {
       display: flex;
@@ -559,8 +617,8 @@
     .initiative-icon { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; border-radius: 8px; flex-shrink: 0; }
     .pr-cell { display: inline-flex; align-items: center; white-space: nowrap; gap: 0.25rem; }
     /* Action buttons - icon only with gradient backgrounds */
-    .actions-cell { display: flex; align-items: center; gap: 0.35rem; }
-    .row-refresh, .fork-btn {
+    .actions-cell { display: flex; align-items: center; gap: 0.35rem; overflow: visible; }
+    .row-refresh, .fork-btn, .custom-cmd-btn {
       padding: 0.35rem;
       background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
       color: var(--text-muted);
@@ -572,7 +630,34 @@
       align-items: center;
       justify-content: center;
     }
-    .row-refresh svg, .fork-btn svg { width: 16px; height: 16px; }
+    .row-refresh svg, .fork-btn svg, .custom-cmd-btn svg { width: 16px; height: 16px; }
+    .custom-cmd-btn {
+      position: relative;
+      overflow: visible;
+    }
+    .custom-cmd-btn:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      color: #fff;
+      border-color: #f59e0b;
+    }
+    .agent-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--surface);
+      pointer-events: none;
+    }
+    .agent-badge--pending { background: #6b7280; }
+    .agent-badge--running { background: #3b82f6; animation: agentPulse 1.2s ease-in-out infinite; }
+    .agent-badge--complete { background: #10b981; }
+    .agent-badge--failed { background: #ef4444; }
+    @keyframes agentPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.3); }
+    }
     .row-refresh:hover {
       background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
       color: #fff;
@@ -1039,6 +1124,102 @@
     .initiative-removing {
       animation: initiativeSlideAway 0.8s ease-in forwards;
     }
+    /* Custom Command Modal */
+    .cmd-modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.15s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .cmd-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 560px;
+      max-width: 90vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: modalSlideUp 0.2s ease-out;
+    }
+    @keyframes modalSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .cmd-modal__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .cmd-modal__title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .cmd-modal__subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+    .cmd-modal__close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+    }
+    .cmd-modal__close:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+    .cmd-modal__input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .cmd-modal__input:focus { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+    .cmd-modal__input::placeholder { color: var(--text-muted); opacity: 0.6; }
+    .cmd-modal__actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+    .cmd-modal__btn {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .cmd-modal__btn--cancel {
+      background: var(--surface);
+      color: var(--text-muted);
+    }
+    .cmd-modal__btn--cancel:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+    .cmd-modal__btn--send {
+      background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      color: #fff;
+      border-color: #f59e0b;
+    }
+    .cmd-modal__btn--send:hover { box-shadow: 0 0 12px rgba(245,158,11,0.4); transform: scale(1.02); }
+    .cmd-modal__hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      opacity: 0.7;
+    }
     /* Back Burner button - flame icon with gradient */
     .back-burner-btn {
       padding: 0.35rem;
@@ -1085,10 +1266,45 @@
     tr.initiative-group-header.back-burnered-group:hover {
       opacity: 0.6;
     }
-    /* Agent status indicator - read-only text display */
+    /* Agent status column */
     .agent-status-cell {
       white-space: nowrap;
-      font-size: 0.75rem;
+      text-align: center;
+      vertical-align: middle;
+    }
+    /* Agent status banner */
+    .agent-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-top: 0.25rem;
+      white-space: nowrap;
+    }
+    .agent-banner svg { width: 12px; height: 12px; }
+    .agent-banner--pending {
+      background: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
+      border: 1px solid rgba(107, 114, 128, 0.3);
+    }
+    .agent-banner--running {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .agent-banner--running svg { animation: spin 1s linear infinite; }
+    .agent-banner--complete {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .agent-banner--failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
     }
     .agent-status {
       display: inline-flex;
@@ -1984,6 +2200,7 @@
   </style>
 </head>
 <body>
+  <div class="drag-bar"></div>
   <div class="app">
     <header class="header">
       <div class="header-left">
@@ -2539,6 +2756,88 @@
       }
     }
 
+    // Custom command modal
+    function openCustomCmdModal(repo, number, path, branch) {
+      // Remove existing modal if any
+      var existing = document.querySelector('.cmd-modal-backdrop');
+      if (existing) existing.remove();
+      
+      var backdrop = document.createElement('div');
+      backdrop.className = 'cmd-modal-backdrop';
+      backdrop.innerHTML = '<div class="cmd-modal">' +
+        '<div class="cmd-modal__header">' +
+          '<div>' +
+            '<div class="cmd-modal__title">Send Command to Agent</div>' +
+            '<div class="cmd-modal__subtitle">' + escapeHtml(repo) + ' #' + number + (branch ? ' — ' + escapeHtml(branch) : '') + '</div>' +
+          '</div>' +
+          '<button type="button" class="cmd-modal__close" id="cmd-modal-close"><i data-lucide="x"></i></button>' +
+        '</div>' +
+        '<textarea class="cmd-modal__input" id="cmd-modal-input" placeholder="Type your command for the Cursor agent...&#10;&#10;e.g. Fix the type errors in UserProfile.tsx"></textarea>' +
+        '<div class="cmd-modal__actions">' +
+          '<button type="button" class="cmd-modal__btn cmd-modal__btn--cancel" id="cmd-modal-cancel">Cancel</button>' +
+          '<button type="button" class="cmd-modal__btn cmd-modal__btn--send" id="cmd-modal-send">Copy &amp; Open Cursor</button>' +
+        '</div>' +
+        '<div class="cmd-modal__hint">Your command will be wrapped with agent status tracking calls to Order Up</div>' +
+      '</div>';
+      
+      document.body.appendChild(backdrop);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      
+      var input = document.getElementById('cmd-modal-input');
+      input.focus();
+      
+      function close() { backdrop.remove(); }
+      
+      // Close on backdrop click
+      backdrop.addEventListener('click', function(e) {
+        if (e.target === backdrop) close();
+      });
+      document.getElementById('cmd-modal-close').addEventListener('click', close);
+      document.getElementById('cmd-modal-cancel').addEventListener('click', close);
+      
+      // Send button
+      document.getElementById('cmd-modal-send').addEventListener('click', function() {
+        var userCmd = input.value.trim();
+        if (!userCmd) { input.focus(); return; }
+        
+        // Build wrapped command with status tracking
+        var cmd = userCmd + '\n\n';
+        cmd += '**IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.\n\n';
+        cmd += 'On Start (run immediately):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"running","type":"all"}\'\n';
+        cmd += '```\n\n';
+        cmd += 'On Complete (run after finishing):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"complete","type":"all","summary":"Done"}\'\n';
+        cmd += '```\n\n';
+        cmd += 'On Failure (if you cannot complete):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"failed","type":"all","error":"Brief description"}\'\n';
+        cmd += '```\n';
+        
+        // Create pending job
+        createPendingJob(repo, parseInt(number, 10), 'all');
+        
+        // Copy and open Cursor
+        copyCommand(cmd, 'Custom command copied!');
+        if (path && path.trim()) {
+          window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        }
+        
+        close();
+      });
+      
+      // Enter to send (Cmd/Ctrl+Enter)
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          document.getElementById('cmd-modal-send').click();
+        }
+        if (e.key === 'Escape') close();
+      });
+    }
+
     var toastTimeout = null;
     function showToast(message) {
       var toast = document.getElementById('toast');
@@ -2759,7 +3058,8 @@
       var backBurnerBtn = '<button type="button" class="back-burner-btn' + (isOnBackBurner ? ' active' : '') + '" title="' + (isOnBackBurner ? 'Move back to active' : 'Move to back burner') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '"><i data-lucide="flame"></i></button>';
       var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a></span>';
       var agentStatusHtml = getAgentStatusHtml(pr.repo, pr.number, path);
-      var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + finishBtn + reviewBtn + '</div>';
+      var customCmdBtn = '<button type="button" class="custom-cmd-btn" title="Send custom command to agent" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(path || '') + '" data-branch="' + escapeAttr(pr.branch || '') + '"><i data-lucide="terminal"></i></button>';
+      var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + customCmdBtn + finishBtn + reviewBtn + '</div>';
       var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path, pr.repo, pr.number, pr.branch) : '';
       var checksHtml = '<div class="checks-container">' +
         '<span class="check-icon-wrap">' + checkCell(c.lint, path, pr.repo, pr.number, 'lint') + '</span>' +
@@ -2770,9 +3070,22 @@
         conflictsBanner +
         '</div>';
       var titleDisplay = '<span class="pr-title" title="' + escapeAttr(pr.title) + '">' + escapeHtml(pr.title.slice(0, 60)) + (pr.title.length > 60 ? '…' : '') + '</span>';
+      // Agent status banner - shown inline under the title when an agent is active
+      var agentBanner = '';
+      var agentKey = pr.repo + '#' + pr.number;
+      var agentJob = agentJobs[agentKey];
+      if (agentJob) {
+        var bannerClass = 'agent-banner agent-banner--' + agentJob.status;
+        var bannerIcon = 'clock';
+        var bannerText = 'Pending...';
+        if (agentJob.status === 'running') { bannerIcon = 'loader-2'; bannerText = 'Agent running'; }
+        else if (agentJob.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Agent done'; }
+        else if (agentJob.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Agent failed'; }
+        agentBanner = '<div class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '"><i data-lucide="' + bannerIcon + '"></i> ' + escapeHtml(bannerText) + '</div>';
+      }
       return '<td>' + initCell + '</td>' +
-        '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? '<br><code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
-        '<td class="agent-status-cell">' + agentStatusHtml + '</td>' +
+        '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? ' <code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
+        '<td class="agent-status-cell">' + agentBanner + '</td>' +
         '<td class="actions-col">' + actionsCell + '</td>' +
         '<td>' + commentsHtml + '</td>' +
         '<td class="checks-cell" colspan="5">' + checksHtml + '</td>' +
@@ -2947,7 +3260,7 @@
             ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(init.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
             : '';
           var headerClass = 'initiative-group-header' + (allBackBurnered ? ' back-burnered-group' : '');
-          html += '<tr class="' + headerClass + '" data-initiative="' + escapeHtml(init.name) + '"><td colspan="12"><div>' + groupCell + focusInput + '</div></td></tr>';
+          html += '<tr class="' + headerClass + '" data-initiative="' + escapeHtml(init.name) + '"><td colspan="11"><div>' + groupCell + focusInput + '</div></td></tr>';
         }
         for (const pr of sortedPrs) {
           var conflictsAttr = hasConflicts(pr) ? ' data-has-conflicts="true"' : '';
@@ -3344,6 +3657,69 @@
       }
     }
     
+    // Update agent status UI for a PR row (badge on button + inline banner)
+    function updateAgentBadge(repo, number) {
+      var row = document.querySelector('tr[data-repo="' + repo + '"][data-number="' + number + '"]');
+      if (!row) return;
+      var key = repo + '#' + number;
+      var job = agentJobs[key];
+
+      // Update dot badge on terminal button
+      var btn = row.querySelector('.custom-cmd-btn');
+      if (btn) {
+        var old = btn.querySelector('.agent-badge');
+        if (old) old.remove();
+        if (!job) {
+          btn.style.borderColor = '';
+          btn.style.boxShadow = '';
+        } else {
+          var dot = document.createElement('span');
+          dot.className = 'agent-badge agent-badge--' + job.status;
+          btn.appendChild(dot);
+          if (job.status === 'running') { btn.style.borderColor = '#3b82f6'; btn.style.boxShadow = '0 0 6px rgba(59,130,246,0.5)'; }
+          else if (job.status === 'complete') { btn.style.borderColor = '#10b981'; btn.style.boxShadow = '0 0 6px rgba(16,185,129,0.5)'; }
+          else if (job.status === 'failed') { btn.style.borderColor = '#ef4444'; btn.style.boxShadow = '0 0 6px rgba(239,68,68,0.5)'; }
+          else { btn.style.borderColor = '#6b7280'; btn.style.boxShadow = '0 0 4px rgba(107,114,128,0.4)'; }
+        }
+      }
+
+      // Update agent status cell banner
+      var statusCell = row.querySelector('.agent-status-cell');
+      if (!statusCell) return;
+
+      if (!job || job.status === 'cleared') {
+        statusCell.innerHTML = '';
+        return;
+      }
+      var bannerIcon = 'clock';
+      var bannerText = 'Pending...';
+      if (job.status === 'running') { bannerIcon = 'loader-2'; bannerText = 'Agent running'; }
+      else if (job.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Agent done'; }
+      else if (job.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Agent failed'; }
+      var bannerClass = 'agent-banner agent-banner--' + job.status;
+
+      statusCell.innerHTML = '<div class="' + bannerClass + '"><i data-lucide="' + bannerIcon + '"></i> ' + bannerText + '</div>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      // Auto-remove "complete" banner after 10 seconds
+      if (job.status === 'complete') {
+        setTimeout(function() {
+          var b = row.querySelector('.agent-banner--complete');
+          if (b) {
+            b.style.transition = 'opacity 0.3s';
+            b.style.opacity = '0';
+            setTimeout(function() { if (b.parentNode) b.parentNode.innerHTML = ''; }, 350);
+          }
+          if (btn) {
+            var d = btn.querySelector('.agent-badge');
+            if (d) d.remove();
+            btn.style.borderColor = '';
+            btn.style.boxShadow = '';
+          }
+        }, 10000);
+      }
+    }
+
     // Create a pending agent job (called when copying a command)
     function createPendingJob(repo, number, type) {
       var id = repo + '#' + number;
@@ -3374,18 +3750,8 @@
         console.error('[Agent Job] Failed to create pending job:', e);
       });
       
-      // Update UI for this row - update the agent status cell
-      var row = document.querySelector('tr[data-repo="' + repo + '"][data-number="' + number + '"]');
-      console.log('[Agent Job] Found row to update:', !!row);
-      if (row) {
-        var statusCell = row.querySelector('.agent-status-cell');
-        if (statusCell) {
-          var rowPath = row.getAttribute('data-path') || '';
-          statusCell.innerHTML = getAgentStatusHtml(repo, number, rowPath);
-          if (typeof lucide !== 'undefined') lucide.createIcons();
-          console.log('[Agent Job] Updated status cell UI');
-        }
-      }
+      // Update the custom-cmd button badge to reflect agent status
+      updateAgentBadge(repo, number);
     }
     
     async function load(newlyCreatedName) {
@@ -4678,6 +5044,18 @@
         }
         return;
       }
+      // Custom command button handler - opens modal
+      var customCmdBtn = e.target && e.target.closest ? e.target.closest('button.custom-cmd-btn') : null;
+      if (customCmdBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var repo = customCmdBtn.getAttribute('data-repo') || '';
+        var num = customCmdBtn.getAttribute('data-number') || '';
+        var path = customCmdBtn.getAttribute('data-path') || '';
+        var branch = customCmdBtn.getAttribute('data-branch') || '';
+        if (repo && num) openCustomCmdModal(repo, num, path, branch);
+        return;
+      }
       var resolveBtn = e.target && e.target.closest ? e.target.closest('button[data-resolve-conflicts]') : null;
       if (resolveBtn) {
         var path = resolveBtn.getAttribute('data-path') || '';
@@ -5115,18 +5493,10 @@
         // Find and update the row in the table
         var row = document.querySelector('tr[data-repo="' + job.repo + '"][data-number="' + job.number + '"]');
         console.log('[SSE Agent Status] Found matching row:', !!row);
+        // Update badge on the custom-cmd button
+        updateAgentBadge(job.repo, job.number);
+        
         if (row) {
-          // Update the agent status cell
-          var statusCell = row.querySelector('.agent-status-cell');
-          console.log('[SSE Agent Status] Found status cell:', !!statusCell);
-          if (statusCell) {
-            var rowPath = row.getAttribute('data-path') || '';
-            var newHtml = getAgentStatusHtml(job.repo, job.number, rowPath);
-            console.log('[SSE Agent Status] Updating cell HTML:', newHtml.substring(0, 100) + '...');
-            statusCell.innerHTML = newHtml;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-          }
-          
           // Flash the row and show toast
           row.style.transition = 'background-color 0.3s';
           if (job.status === 'complete') {
