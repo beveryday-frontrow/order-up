@@ -176,6 +176,7 @@
     .game-stats__value--comments { color: #00d4ff; }
     .game-stats__value--conflicts { color: #ffcc00; }
     .game-stats__value--reviews { color: #ff00ff; }
+    .game-stats__value--game { color: #ff8800; }
     .game-stats__reset {
       background: #111;
       border: 1px solid #333;
@@ -654,6 +655,17 @@
       text-align: center;
       margin-bottom: 0.5rem;
     }
+    .loading-stage__score {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: 0.5rem;
+      color: #ffcc00;
+      text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00;
+      letter-spacing: 1px;
+      z-index: 10;
+    }
     .loading-stage__hint {
       position: absolute;
       bottom: 32px;
@@ -967,6 +979,66 @@
       transform: scale(1.05);
       box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
     }
+    /* ORDER UP! merge animations */
+    @keyframes orderUpFlash {
+      0% { opacity: 1; transform: scale(1); }
+      15% { opacity: 1; transform: scale(1.08); background: rgba(16, 185, 129, 0.3); }
+      30% { opacity: 1; transform: scale(1); }
+      45% { opacity: 1; transform: scale(1.04); background: rgba(16, 185, 129, 0.15); }
+      60% { opacity: 1; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes prRowSlideOut {
+      0% { opacity: 1; transform: translateX(0); max-height: 80px; }
+      60% { opacity: 0.5; transform: translateX(40px); }
+      100% { opacity: 0; transform: translateX(100px); max-height: 0; padding: 0; overflow: hidden; }
+    }
+    @keyframes initiativeSlideAway {
+      0% { opacity: 1; transform: scale(1) translateY(0); max-height: 200px; }
+      30% { opacity: 1; transform: scale(1.02) translateY(0); }
+      70% { opacity: 0.4; transform: scale(0.95) translateY(-10px); max-height: 200px; }
+      100% { opacity: 0; transform: scale(0.8) translateY(-30px); max-height: 0; overflow: hidden; }
+    }
+    .order-up-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      pointer-events: none;
+      animation: orderUpOverlayFade 2.5s ease-out forwards;
+    }
+    @keyframes orderUpOverlayFade {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .order-up-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4rem;
+      color: #fbbf24;
+      text-shadow:
+        0 0 20px #f59e0b,
+        0 0 40px #f59e0b,
+        0 0 80px #ef4444,
+        3px 3px 0 #b45309;
+      animation: orderUpBounce 0.6s ease-out;
+      letter-spacing: 0.1em;
+    }
+    @keyframes orderUpBounce {
+      0% { transform: scale(0.3) rotate(-5deg); opacity: 0; }
+      50% { transform: scale(1.15) rotate(2deg); opacity: 1; }
+      70% { transform: scale(0.95) rotate(-1deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+    .pr-row-merging {
+      animation: prRowSlideOut 0.6s ease-in forwards;
+    }
+    .initiative-removing {
+      animation: initiativeSlideAway 0.8s ease-in forwards;
+    }
     /* Back Burner button - flame icon with gradient */
     .back-burner-btn {
       padding: 0.35rem;
@@ -1043,6 +1115,21 @@
     .agent-status.failed {
       background: rgba(239, 68, 68, 0.2);
       color: #f87171;
+    }
+    .agent-status-link {
+      text-decoration: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: opacity 0.15s ease;
+    }
+    .agent-status-link:hover {
+      opacity: 0.8;
+    }
+    .agent-status-link:hover .agent-status {
+      filter: brightness(1.15);
+    }
+    .agent-status-link:hover .agent-status-empty {
+      color: var(--primary);
     }
     .agent-status-empty {
       color: var(--text-muted);
@@ -1929,12 +2016,16 @@
               <span class="game-stats__counter-label">CONFLICTS</span>
               <span class="game-stats__counter-value game-stats__value--conflicts" id="stat-conflicts">00</span>
             </div>
-            <div class="game-stats__counter">
-              <span class="game-stats__counter-label">REVIEWS</span>
-              <span class="game-stats__counter-value game-stats__value--reviews" id="stat-reviews">00</span>
-            </div>
+          <div class="game-stats__counter">
+            <span class="game-stats__counter-label">REVIEWS</span>
+            <span class="game-stats__counter-value game-stats__value--reviews" id="stat-reviews">00</span>
           </div>
-          <button type="button" class="game-stats__reset" id="stats-reset" title="Reset all stats">RESET</button>
+          <div class="game-stats__counter">
+            <span class="game-stats__counter-label">GAME HI</span>
+            <span class="game-stats__counter-value game-stats__value--game" id="stat-game-high">00</span>
+          </div>
+        </div>
+        <button type="button" class="game-stats__reset" id="stats-reset" title="Reset all stats">RESET</button>
         </div>
         <span class="meta" id="updated">—</span>
       </div>
@@ -2318,11 +2409,16 @@
       gameStats = { served: 0, bugs: 0, comments: 0, conflicts: 0, reviews: 0 };
       saveGameStats();
       renderGameStats();
+      // Also reset loading game high score
+      loadingGameHighScore = 0;
+      try { localStorage.setItem(LOADING_GAME_HIGH_KEY, '0'); } catch (e) {}
+      renderLoadingGameHighScore();
     }
     
     // Render stats on page load
     document.addEventListener('DOMContentLoaded', function() {
       renderGameStats();
+      renderLoadingGameHighScore();
       var resetBtn = document.getElementById('stats-reset');
       if (resetBtn) {
         resetBtn.addEventListener('click', function() {
@@ -2365,7 +2461,8 @@
       
       if (kind === 'comments') {
         var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
-        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link + statusReminder;
+        var resolveReminder = '\n\n**CRITICAL**: After addressing each comment, you MUST mark it as resolved in GitHub using:\n```bash\ngh api graphql -f query=\'mutation { resolveReviewThread(input: {threadId: "THREAD_ID"}) { thread { isResolved } } }\'\n```\nGet thread IDs from: `gh api graphql -f query=\'{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: ' + number + ') { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { nodes { body } } } } } } }\'`\nJust addressing the code is NOT enough - comments must show as resolved in GitHub!';
+        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link + resolveReminder + statusReminder;
       }
       // For checks, include which check category is failing
       var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
@@ -2545,10 +2642,16 @@
     // Global agent jobs state - tracks running/completed agent jobs per PR
     var agentJobs = {};
     
-    function getAgentStatusHtml(repo, number) {
+    function getAgentStatusHtml(repo, number, path) {
       var key = repo + '#' + number;
       var job = agentJobs[key];
-      if (!job) return '<span class="agent-status-empty">—</span>';
+      if (!job) {
+        // No job - still make clickable if path exists
+        if (path && path.trim()) {
+          return '<a href="cursor://file/' + escapeUri(path) + '" class="agent-status-link" title="Open in Cursor"><span class="agent-status-empty">—</span></a>';
+        }
+        return '<span class="agent-status-empty">—</span>';
+      }
       
       var icon = 'loader-2';
       var statusClass = job.status;
@@ -2558,22 +2661,28 @@
       if (job.status === 'running') {
         icon = 'loader-2';
         text = 'Running...';
-        title = 'Agent working on ' + (job.type || 'fixes');
+        title = 'Agent working on ' + (job.type || 'fixes') + ' - Click to open in Cursor';
       } else if (job.status === 'complete') {
         icon = 'check';
-        text = job.summary || 'Done';
-        title = job.summary || 'Agent completed';
+        text = 'Done';
+        title = (job.summary || 'Agent completed') + ' - Click to open in Cursor';
       } else if (job.status === 'failed') {
         icon = 'alert-circle';
         text = 'Failed';
-        title = job.error || 'Agent failed';
+        title = (job.error || 'Agent failed') + ' - Click to open in Cursor';
       } else if (job.status === 'pending') {
         icon = 'clock';
         text = 'Pending';
-        title = 'Waiting for agent to start';
+        title = 'Waiting for agent to start - Click to open in Cursor';
       }
       
-      return '<span class="agent-status ' + statusClass + '" title="' + escapeAttr(title) + '"><i data-lucide="' + icon + '"></i> ' + escapeHtml(text) + '</span>';
+      var statusSpan = '<span class="agent-status ' + statusClass + '" title="' + escapeAttr(title) + '"><i data-lucide="' + icon + '"></i> ' + escapeHtml(text) + '</span>';
+      
+      // Wrap in link if path exists
+      if (path && path.trim()) {
+        return '<a href="cursor://file/' + escapeUri(path) + '" class="agent-status-link">' + statusSpan + '</a>';
+      }
+      return statusSpan;
     }
     
     function buildInitPickerDropdown(pr) {
@@ -2649,7 +2758,7 @@
       var isOnBackBurner = isBackBurner(pr.repo, pr.number);
       var backBurnerBtn = '<button type="button" class="back-burner-btn' + (isOnBackBurner ? ' active' : '') + '" title="' + (isOnBackBurner ? 'Move back to active' : 'Move to back burner') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '"><i data-lucide="flame"></i></button>';
       var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a></span>';
-      var agentStatusHtml = getAgentStatusHtml(pr.repo, pr.number);
+      var agentStatusHtml = getAgentStatusHtml(pr.repo, pr.number, path);
       var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + finishBtn + reviewBtn + '</div>';
       var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path, pr.repo, pr.number, pr.branch) : '';
       var checksHtml = '<div class="checks-container">' +
@@ -3049,7 +3158,33 @@
         if (savedMsg) { savedMsg.textContent = 'Reset to default.'; setTimeout(function() { savedMsg.textContent = ''; }, 2000); }
       });
     }
-    var loadingGameState = { chefY: 0, chefVy: 0, lastFrameTime: 0, state: 'playing', deathStartTime: 0, respawnAt: 0, invincibleUntil: 0 };
+    var loadingGameState = { chefY: 0, chefVy: 0, lastFrameTime: 0, state: 'playing', deathStartTime: 0, respawnAt: 0, invincibleUntil: 0, score: 0, jumpedFoods: {} };
+    var LOADING_GAME_HIGH_KEY = 'prWatcher_loadingGameHigh';
+    var loadingGameHighScore = 0;
+    try {
+      var storedGameHigh = localStorage.getItem(LOADING_GAME_HIGH_KEY);
+      if (storedGameHigh) loadingGameHighScore = parseInt(storedGameHigh, 10) || 0;
+    } catch (e) {}
+    
+    function updateLoadingGameHighScore() {
+      if (loadingGameState.score > loadingGameHighScore) {
+        loadingGameHighScore = loadingGameState.score;
+        try { localStorage.setItem(LOADING_GAME_HIGH_KEY, String(loadingGameHighScore)); } catch (e) {}
+        // Update the stat display
+        var el = document.getElementById('stat-game-high');
+        if (el) {
+          el.textContent = formatArcadeNumber(loadingGameHighScore, 2);
+          el.classList.remove('bump');
+          void el.offsetWidth;
+          el.classList.add('bump');
+        }
+      }
+    }
+    
+    function renderLoadingGameHighScore() {
+      var el = document.getElementById('stat-game-high');
+      if (el) el.textContent = formatArcadeNumber(loadingGameHighScore, 2);
+    }
     
     // Build food items HTML for loading game from all initiatives
     function buildLoadingFoodItems() {
@@ -3073,7 +3208,12 @@
     }
     
     function buildLoadingStageHtml() {
-      return '<div class="card loading-card"><div class="loading-stage" aria-hidden="true"><p class="loading-stage__title">Checking the kitchen…</p><div class="loading-stage__food-track">' + buildLoadingFoodItems() + '</div><div class="loading-stage__chef" role="img" aria-hidden="true"></div><div class="loading-stage__ground"></div><span class="loading-stage__hint"><kbd>W</kbd> to jump</span></div></div>';
+      return '<div class="card loading-card"><div class="loading-stage" aria-hidden="true"><p class="loading-stage__title">Checking the kitchen…</p><div class="loading-stage__score" id="loading-game-score">SCORE: 0</div><div class="loading-stage__food-track">' + buildLoadingFoodItems() + '</div><div class="loading-stage__chef" role="img" aria-hidden="true"></div><div class="loading-stage__ground"></div><span class="loading-stage__hint"><kbd>W</kbd> to jump</span></div></div>';
+    }
+    function updateLoadingScore() {
+      var el = document.getElementById('loading-game-score');
+      if (el) el.textContent = 'SCORE: ' + loadingGameState.score;
+      updateLoadingGameHighScore();
     }
     function initLoadingGame() {
       var chef = document.querySelector('.loading-stage__chef');
@@ -3083,6 +3223,9 @@
       loadingGameState.chefVy = 0;
       loadingGameState.lastFrameTime = performance.now();
       loadingGameState.state = 'playing';
+      loadingGameState.score = 0;
+      loadingGameState.jumpedFoods = {};
+      updateLoadingScore();
       var displayHeight = 64;
       var blinkInterval = 100;
       var blinkCount = 4;
@@ -3143,11 +3286,26 @@
           c.style.backgroundPosition = (-f.x * scale) + 'px ' + (-f.y * scale) + 'px';
           c.style.filter = 'none';
         }
-        if (loadingGameState.chefY === 0 && now > loadingGameState.invincibleUntil) {
-          for (var i = 0; i < foods.length; i++) {
-            var fr = foods[i].getBoundingClientRect();
-            var cr = c.getBoundingClientRect();
+        // Check for jumping over food (score points) or collision (death)
+        for (var i = 0; i < foods.length; i++) {
+          var fr = foods[i].getBoundingClientRect();
+          var cr = c.getBoundingClientRect();
+          var foodKey = 'food_' + i + '_' + Math.floor(fr.left / 100); // Unique key per food pass
+          
+          // Check if food is passing under chef while jumping
+          if (loadingGameState.chefY > 20 && fr.right >= cr.left && fr.left <= cr.right) {
+            if (!loadingGameState.jumpedFoods[foodKey]) {
+              loadingGameState.jumpedFoods[foodKey] = true;
+              loadingGameState.score++;
+              updateLoadingScore();
+            }
+          }
+          
+          // Collision detection (only when on ground and not invincible)
+          if (loadingGameState.chefY === 0 && now > loadingGameState.invincibleUntil) {
             if (fr.right >= cr.left && fr.left <= cr.right && fr.bottom >= cr.top && fr.top <= cr.bottom) {
+              loadingGameState.score++; // +1 point for dying
+              updateLoadingScore();
               loadingGameState.state = 'dying';
               loadingGameState.deathStartTime = now;
               break;
@@ -3222,7 +3380,8 @@
       if (row) {
         var statusCell = row.querySelector('.agent-status-cell');
         if (statusCell) {
-          statusCell.innerHTML = getAgentStatusHtml(repo, number);
+          var rowPath = row.getAttribute('data-path') || '';
+          statusCell.innerHTML = getAgentStatusHtml(repo, number, rowPath);
           if (typeof lucide !== 'undefined') lucide.createIcons();
           console.log('[Agent Job] Updated status cell UI');
         }
@@ -4125,15 +4284,29 @@
         e.preventDefault();
         e.stopPropagation();
         
+        // Find the initiative name from the closest initiative group header
+        var mergeRow = mergeBtn.closest('tr[data-repo]');
+        var initiativeName = '';
+        if (mergeRow) {
+          var prev = mergeRow.previousElementSibling;
+          while (prev) {
+            if (prev.classList && prev.classList.contains('initiative-group-header')) {
+              initiativeName = prev.getAttribute('data-initiative') || '';
+              break;
+            }
+            prev = prev.previousElementSibling;
+          }
+        }
+        
         mergeBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
         mergeBtn.disabled = true;
         
-        // Call merge API
+        // Call merge API with initiative name
         fetch('/api/merge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repo: repo, number: parseInt(num, 10) })
+          body: JSON.stringify({ repo: repo, number: parseInt(num, 10), initiative: initiativeName })
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -4142,12 +4315,77 @@
             mergeBtn.innerHTML = '<i data-lucide="check"></i>';
             mergeBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
             if (typeof lucide !== 'undefined') lucide.createIcons();
-            showToast('PR #' + num + ' merged successfully!');
-            // Remove the row after a short delay since the PR is now merged
-            setTimeout(function() {
-              var row = mergeBtn.closest('tr');
-              if (row) row.remove();
-            }, 2000);
+            showToast('PR #' + num + ' merged! ORDER UP!');
+            
+            var row = mergeBtn.closest('tr');
+            if (!row) return;
+            
+            // Check if this was the last PR in the initiative
+            if (data.initiativeRemoved && data.removedInitiative) {
+              // Collect all rows for this initiative (header + PR rows)
+              var initRows = [];
+              var headerRow = null;
+              var prev = row.previousElementSibling;
+              while (prev) {
+                if (prev.classList && prev.classList.contains('initiative-group-header')) {
+                  headerRow = prev;
+                  break;
+                }
+                prev = prev.previousElementSibling;
+              }
+              if (headerRow) {
+                initRows.push(headerRow);
+                var next = headerRow.nextElementSibling;
+                while (next && !next.classList.contains('initiative-group-header')) {
+                  initRows.push(next);
+                  next = next.nextElementSibling;
+                }
+              }
+              
+              // Flash the row green first
+              row.style.transition = 'background-color 0.3s';
+              row.style.backgroundColor = 'rgba(16, 185, 129, 0.3)';
+              
+              // Show ORDER UP! overlay
+              setTimeout(function() {
+                var overlay = document.createElement('div');
+                overlay.className = 'order-up-overlay';
+                overlay.innerHTML = '<div class="order-up-text">ORDER UP!</div>';
+                document.body.appendChild(overlay);
+                setTimeout(function() { overlay.remove(); }, 2600);
+                
+                // Animate all initiative rows away
+                for (var i = 0; i < initRows.length; i++) {
+                  initRows[i].classList.add('initiative-removing');
+                }
+                
+                // Remove rows and initiative card after animation
+                setTimeout(function() {
+                  for (var i = 0; i < initRows.length; i++) {
+                    if (initRows[i].parentNode) initRows[i].parentNode.removeChild(initRows[i]);
+                  }
+                  // Remove initiative card from the top bar
+                  var card = document.querySelector('.initiative-card[data-initiative-name="' + data.removedInitiative + '"]');
+                  if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.5)';
+                    setTimeout(function() { if (card.parentNode) card.parentNode.removeChild(card); }, 350);
+                  }
+                }, 900);
+              }, 800);
+              
+            } else {
+              // Just remove the single PR row with animation
+              row.style.transition = 'background-color 0.3s';
+              row.style.backgroundColor = 'rgba(16, 185, 129, 0.3)';
+              setTimeout(function() {
+                row.classList.add('pr-row-merging');
+                setTimeout(function() {
+                  if (row.parentNode) row.parentNode.removeChild(row);
+                }, 650);
+              }, 600);
+            }
           } else {
             mergeBtn.innerHTML = '<i data-lucide="x"></i>';
             mergeBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
@@ -4882,7 +5120,8 @@
           var statusCell = row.querySelector('.agent-status-cell');
           console.log('[SSE Agent Status] Found status cell:', !!statusCell);
           if (statusCell) {
-            var newHtml = getAgentStatusHtml(job.repo, job.number);
+            var rowPath = row.getAttribute('data-path') || '';
+            var newHtml = getAgentStatusHtml(job.repo, job.number, rowPath);
             console.log('[SSE Agent Status] Updating cell HTML:', newHtml.substring(0, 100) + '...');
             statusCell.innerHTML = newHtml;
             if (typeof lucide !== 'undefined') lucide.createIcons();

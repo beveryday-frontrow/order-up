@@ -1,5 +1,5 @@
 import express from "express";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -431,8 +431,9 @@ async function getPRCheckCategories(repo: string, number: number): Promise<PRSta
   for (const r of runs) {
     const cat = categorizeCheck(r.name);
     if (r.status !== "completed") byCat[cat].pending++;
-    else if (r.conclusion === "success" || r.conclusion === "skipped") byCat[cat].success++;
-    else byCat[cat].failure++;
+    else if (r.conclusion === "success" || r.conclusion === "skipped" || r.conclusion === "neutral") byCat[cat].success++;
+    else if (r.conclusion === "failure" || r.conclusion === "timed_out" || r.conclusion === "cancelled" || r.conclusion === "action_required") byCat[cat].failure++;
+    // Ignore other conclusions (stale, etc.) — don't count as failure
   }
   const toStatus = (c: { success: number; failure: number; pending: number }): CategoryStatus => {
     if (c.failure > 0) return "failure";
@@ -554,9 +555,11 @@ app.post("/api/fix-check", (req, res) => {
 });
 
 // POST /api/merge — merge a PR (repo + number). Uses squash merge. Only succeeds when PR is mergeable.
+// Also checks if initiative has no more open PRs and cleans up if so.
 app.post("/api/merge", async (req, res) => {
   const repo = req.body?.repo;
   const number = req.body?.number;
+  const initiativeName = typeof req.body?.initiative === "string" ? req.body.initiative.trim() : "";
   if (typeof repo !== "string" || !repo || typeof number !== "number" || !Number.isInteger(number)) {
     res.status(400).json({ error: "Missing or invalid repo or number" });
     return;
@@ -569,18 +572,79 @@ app.post("/api/merge", async (req, res) => {
     
     // Verify the PR is actually merged by checking its state
     const verifyOut = await runAllowExit("gh", ["pr", "view", String(number), "--repo", repo, "--json", "state"]);
+    let merged = false;
     if (verifyOut) {
-      const state = JSON.parse(verifyOut);
-      if (state.state === "MERGED") {
-        console.log(`PR #${number} confirmed merged`);
-        res.json({ merged: true });
-        return;
+      try {
+        const state = JSON.parse(verifyOut);
+        if (state.state === "MERGED") {
+          console.log(`PR #${number} confirmed merged`);
+          merged = true;
+        }
+      } catch {}
+    }
+    if (!merged) merged = true; // gh pr merge is synchronous, trust it
+
+    // Check if this was the last open PR for the initiative
+    let initiativeRemoved = false;
+    let removedInitiative = "";
+    if (initiativeName && initiativeName !== "—") {
+      try {
+        // Check remaining open PRs for this initiative by scanning local branches
+        const raw = await readFile(CONFIG_PATH, "utf-8");
+        const config: TrackingConfig = JSON.parse(raw);
+        const init = config.initiatives[initiativeName];
+        if (init?.path) {
+          // Count other open PRs in this initiative
+          const allOpen = await listAllMyOpenPRs();
+          const initPath = init.path;
+          // Scan which branches are checked out in this initiative
+          const initBranches: string[] = [];
+          for (const subfolder of LOCAL_SUBFOLDERS) {
+            const branchAndRepo = await getLocalBranchAndRepo(initPath, subfolder);
+            if (branchAndRepo && branchAndRepo.branch !== "main" && branchAndRepo.branch !== "HEAD") {
+              initBranches.push(`${branchAndRepo.repo}#${branchAndRepo.branch}`);
+            }
+          }
+          // Check how many of those branches have open PRs (excluding the one we just merged)
+          const remainingOpenPRs = allOpen.filter(
+            (pr) => pr.number !== number && initBranches.includes(`${pr.repo}#${pr.headRefName}`)
+          );
+          console.log(`[Merge] Initiative "${initiativeName}" has ${remainingOpenPRs.length} remaining open PRs`);
+          
+          if (remainingOpenPRs.length === 0) {
+            // No more open PRs - remove initiative from config and delete folder
+            console.log(`[Merge] Removing initiative "${initiativeName}" - no more open PRs`);
+            
+            // Remove from config
+            delete config.initiatives[initiativeName];
+            config.updatedAt = new Date().toISOString();
+            await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
+            console.log(`[Merge] Removed "${initiativeName}" from tracking config`);
+            
+            // Delete initiative folder
+            if (existsSync(initPath)) {
+              await rm(initPath, { recursive: true, force: true });
+              console.log(`[Merge] Deleted initiative folder: ${initPath}`);
+            }
+            
+            // Delete initiative image
+            const imagePath = join(__dirname, "public", "images", "initiatives", `${initiativeName}.png`);
+            if (existsSync(imagePath)) {
+              await rm(imagePath, { force: true });
+              console.log(`[Merge] Deleted initiative image: ${imagePath}`);
+            }
+            
+            initiativeRemoved = true;
+            removedInitiative = initiativeName;
+          }
+        }
+      } catch (e) {
+        console.error(`[Merge] Error checking/removing initiative:`, e);
+        // Don't fail the merge response for cleanup errors
       }
     }
-    
-    // If we get here, the merge command succeeded but state isn't MERGED yet - still return success
-    // as gh pr merge is synchronous and waits for completion
-    res.json({ merged: true });
+
+    res.json({ merged: true, initiativeRemoved, removedInitiative });
   } catch (e) {
     console.error(`Merge failed for PR #${number}:`, e);
     res.status(400).json({ error: String(e) });
@@ -1148,7 +1212,7 @@ setInterval(() => {
 }, 60000);
 
 // POST /api/agent-job — report agent job status (called by Cursor agents)
-app.post("/api/agent-job", (req, res) => {
+app.post("/api/agent-job", async (req, res) => {
   try {
     console.log(`[Agent Job API] Received request:`, JSON.stringify(req.body));
     
@@ -1159,6 +1223,7 @@ app.post("/api/agent-job", (req, res) => {
       return;
     }
     const id = `${repo}#${number}`;
+    const num = parseInt(number, 10);
     const existing = agentJobs.get(id);
     
     console.log(`[Agent Job API] Processing job ${id}: ${existing ? 'updating existing' : 'creating new'}`);
@@ -1166,7 +1231,7 @@ app.post("/api/agent-job", (req, res) => {
     const job: AgentJob = {
       id,
       repo,
-      number: parseInt(number, 10),
+      number: num,
       type: type || existing?.type || "all",
       status,
       startedAt: existing?.startedAt || Date.now(),
@@ -1182,6 +1247,26 @@ app.post("/api/agent-job", (req, res) => {
     broadcastSSE("agent-status", job);
     
     console.log(`[Agent Job API] ✓ Job ${id}: ${status}${summary ? ` - ${summary}` : ""}${error ? ` (error: ${error})` : ""}`);
+    
+    // When agent completes, refresh the PR data and broadcast update
+    if (status === "complete") {
+      console.log(`[Agent Job API] Agent completed - fetching fresh PR data for ${repo}#${num}`);
+      // Use setTimeout to allow git/GitHub to sync (agent may have just pushed)
+      setTimeout(async () => {
+        try {
+          const pr = await fetchPRData(repo, num);
+          if (pr) {
+            console.log(`[Agent Job API] Broadcasting PR update for ${repo}#${num}`);
+            broadcastSSE("pr-update", { pr });
+          } else {
+            console.log(`[Agent Job API] Could not fetch PR data for ${repo}#${num}`);
+          }
+        } catch (e) {
+          console.error(`[Agent Job API] Error fetching PR data:`, e);
+        }
+      }, 3000); // Wait 3 seconds for GitHub to update
+    }
+    
     res.json(job);
   } catch (e) {
     console.error("[Agent Job API] Error:", e);

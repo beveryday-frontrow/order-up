@@ -7,6 +7,10 @@ description: Handle unresolved PR comments by fetching them via gh CLI, addressi
 
 Automatically fetch, address, and resolve unresolved PR review comments using GitHub CLI.
 
+## CRITICAL REQUIREMENT
+
+**Addressing code is NOT enough!** You MUST mark each comment thread as resolved in GitHub using the `resolveReviewThread` mutation. The PR will continue to show unresolved comments until you explicitly resolve each thread via the API. Simply making code changes and replying does not automatically resolve comments!
+
 ## Status Reporting
 
 **IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.
@@ -221,7 +225,9 @@ The GraphQL queries assume you're using GitHub CLI v2.0+. If queries fail:
 
 ## Common Pitfalls
 
+- **NEVER skip the resolveReviewThread call** - Just fixing code does NOT resolve the comment in GitHub!
 - **Don't mark as resolved before replying** - Always reply first, then resolve
 - **Don't skip the commit message** - Explain what review feedback you're addressing
 - **Don't resolve in bulk** - Handle each comment individually with specific replies
 - **Don't forget to push** - Changes must be pushed before marking as resolved
+- **Verify resolution worked** - Re-run the fetch query to confirm `isResolved: true` for each thread
