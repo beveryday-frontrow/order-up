@@ -7,6 +7,33 @@ description: Monitor and fix PR status check failures by fetching check status v
 
 Automatically monitor, investigate, and fix failing PR status checks until all checks pass.
 
+## Status Reporting
+
+**IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.
+
+### On Start (run immediately after getting PR info):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"running","type":"checks"}'
+```
+
+### On Complete (run after all checks pass):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"complete","type":"checks","summary":"Fixed X failing checks"}'
+```
+
+### On Failure (if you cannot complete):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"failed","type":"checks","error":"Brief description of why"}'
+```
+
+Replace `{OWNER}`, `{REPO}`, `{PR_NUMBER}`, and the summary/error messages with actual values.
+
 ## Workflow
 
 Follow these steps to handle PR status check failures:

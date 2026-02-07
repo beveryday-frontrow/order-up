@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="/images/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root {
@@ -56,12 +56,18 @@
     }
     .header-left {
       display: flex;
-      align-items: baseline;
-      gap: 0.75rem;
+      align-items: center;
+      gap: 1rem;
     }
     .logo-link {
       display: flex;
       align-items: center;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    .logo-link:hover {
+      transform: scale(1.02);
+      filter: brightness(1.1);
     }
     .logo-img {
       height: 160px;
@@ -73,6 +79,161 @@
       color: var(--text-dim);
       font-size: 0.8125rem;
     }
+    
+    /* Game Stats - 1980s Arcade Style (in header) */
+    .game-stats {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      padding: 0.5rem 0.75rem;
+      background: #000;
+      border: 3px solid #222;
+      border-radius: 4px;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      box-shadow: 
+        0 0 0 1px #444,
+        0 0 15px rgba(0,0,0,0.6),
+        inset 0 0 30px rgba(0,0,0,0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    /* CRT scanline effect */
+    .game-stats::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .game-stats__scores {
+      display: flex;
+      gap: 1.25rem;
+      padding-right: 1rem;
+      border-right: 1px solid #333;
+    }
+    .game-stats__player,
+    .game-stats__high {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .game-stats__player-label {
+      font-size: 0.5rem;
+      color: #ff0000;
+      text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+      animation: blink1up 1s steps(1) infinite;
+    }
+    @keyframes blink1up {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    .game-stats__player-score {
+      font-size: 0.75rem;
+      color: #ffffff;
+      text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #fff;
+      letter-spacing: 2px;
+    }
+    .game-stats__high-label {
+      font-size: 0.4rem;
+      color: #ff0000;
+      text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+    }
+    .game-stats__high-value {
+      font-size: 0.75rem;
+      color: #ffffff;
+      text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #fff;
+      letter-spacing: 2px;
+    }
+    /* Stat counters */
+    .game-stats__counters {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0 1rem;
+      align-items: center;
+    }
+    .game-stats__counter {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+    }
+    .game-stats__counter-label {
+      font-size: 0.3rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .game-stats__counter-value {
+      font-size: 0.6rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor;
+    }
+    .game-stats__value--served { color: #00ff00; }
+    .game-stats__value--bugs { color: #ff0040; }
+    .game-stats__value--comments { color: #00d4ff; }
+    .game-stats__value--conflicts { color: #ffcc00; }
+    .game-stats__value--reviews { color: #ff00ff; }
+    .game-stats__reset {
+      background: #111;
+      border: 1px solid #333;
+      color: #555;
+      font-size: 0.35rem;
+      font-family: inherit;
+      padding: 0.3rem 0.5rem;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      align-self: center;
+      margin-left: 0.5rem;
+    }
+    .game-stats__reset:hover {
+      background: #200;
+      border-color: #ff0040;
+      color: #ff0040;
+      text-shadow: 0 0 8px #ff0040;
+    }
+    /* Animations */
+    .game-stats__player-score.bump {
+      animation: statBump 0.3s ease-out, glowPulse 0.3s ease-out;
+    }
+    .game-stats__high-value.bump {
+      animation: highScoreBump 0.5s ease-out;
+    }
+    .game-stats__counter-value.bump {
+      animation: statBump 0.3s ease-out, glowPulse 0.3s ease-out;
+    }
+    @keyframes statBump {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    @keyframes glowPulse {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(2); }
+      100% { filter: brightness(1); }
+    }
+    @keyframes highScoreBump {
+      0% { transform: scale(1); color: #ffffff; }
+      25% { transform: scale(1.3); color: #ffff00; text-shadow: 0 0 15px #ffff00, 0 0 30px #ffff00; }
+      50% { transform: scale(1.2); color: #ff0000; }
+      75% { transform: scale(1.25); color: #00ff00; }
+      100% { transform: scale(1); color: #ffffff; }
+    }
+    @media (max-width: 1100px) {
+      .game-stats {
+        padding: 0.4rem 0.5rem;
+      }
+      .game-stats__scores { gap: 0.75rem; padding-right: 0.75rem; }
+      .game-stats__player-label, .game-stats__high-label { font-size: 0.35rem; }
+      .game-stats__player-score, .game-stats__high-value { font-size: 0.6rem; }
+      .game-stats__counters { gap: 0.5rem; padding: 0 0.5rem; }
+      .game-stats__counter-label { font-size: 0.25rem; }
+      .game-stats__counter-value { font-size: 0.5rem; }
+    }
+    
     .btn {
       display: inline-flex;
       align-items: center;
@@ -396,13 +557,34 @@
     .initiative-with-icon { display: inline-flex; align-items: center; gap: 0.375rem; }
     .initiative-icon { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; border-radius: 8px; flex-shrink: 0; }
     .pr-cell { display: inline-flex; align-items: center; white-space: nowrap; gap: 0.25rem; }
-    .row-refresh { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.15rem 0.3rem; border-radius: 4px; display: inline-flex; align-items: center; }
-    .row-refresh:hover { color: var(--accent); background: var(--surface-hover); }
+    /* Action buttons - icon only with gradient backgrounds */
+    .actions-cell { display: flex; align-items: center; gap: 0.35rem; }
+    .row-refresh, .fork-btn {
+      padding: 0.35rem;
+      background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .row-refresh svg, .fork-btn svg { width: 16px; height: 16px; }
+    .row-refresh:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      color: #fff;
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+    }
     .row-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
-    .row-refresh svg { width: 14px; height: 14px; }
-    .fork-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.15rem 0.3rem; border-radius: 4px; display: inline-flex; align-items: center; }
-    .fork-btn:hover { color: #a855f7; background: var(--surface-hover); }
-    .fork-btn svg { width: 14px; height: 14px; }
+    .fork-btn:hover {
+      background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+      color: #fff;
+      border-color: #a855f7;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+    }
     .row-merge-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.35rem; vertical-align: middle; }
     .row-merge-btn:disabled { opacity: 0.7; cursor: not-allowed; }
     .repo-cell { display: block; }
@@ -716,70 +898,66 @@
     .chef-animations__item[data-frames="1"] .frame-btns { display: none; }
     .chef-anim-tweak .chef-align-all-btn { padding: 0.2rem 0.5rem; font-size: 0.6875rem; }
     .error { color: var(--danger); }
-    /* 86 THE BUGS button and flamethrower animation */
+    /* 86 THE BUGS button - icon only */
     .finish-him-btn {
-      padding: 0.2rem 0.5rem;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: linear-gradient(135deg, #ef4444 0%, #f97316 50%, #eab308 100%);
-      border: none;
+      padding: 0.35rem;
+      background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+      border: 1px solid #ef4444;
       color: #fff;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.15s;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      white-space: nowrap;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .finish-him-btn svg { width: 16px; height: 16px; }
     .finish-him-btn:hover:not(:disabled) {
-      transform: scale(1.05);
+      background: linear-gradient(135deg, #f97316 0%, #eab308 100%);
       box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+      border-color: #f97316;
     }
     .finish-him-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
     }
-    .finish-him-btn--active {
-      animation: finish-him-pulse 0.5s ease-in-out infinite alternate;
-    }
-    @keyframes finish-him-pulse {
-      0% { box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
-      100% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.9); }
-    }
-    /* CALL THE CHEF button - shown when PR is ready for review */
+    /* CALL THE CHEF button - icon only */
     .review-now-btn {
-      padding: 0.2rem 0.5rem;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
-      border: none;
+      padding: 0.35rem;
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      border: 1px solid #10b981;
       color: #fff;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.15s;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      white-space: nowrap;
-      margin-left: 0.25rem;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .review-now-btn svg { width: 16px; height: 16px; }
     .review-now-btn:hover {
-      transform: scale(1.05);
+      background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
       box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+      border-color: #06b6d4;
     }
-    /* MERGE button - shown when PR is approved and ready to merge */
+    /* SERVE IT / MERGE button - icon only */
     .merge-btn {
-      padding: 0.2rem 0.5rem;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      padding: 0.35rem;
       background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+      border: 1px solid #8b5cf6;
       color: #fff;
-      border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .merge-btn svg { width: 16px; height: 16px; }
+    .merge-btn:hover {
+      background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+      border-color: #a855f7;
       transition: transform 0.15s, box-shadow 0.15s;
       box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
       white-space: nowrap;
@@ -788,6 +966,91 @@
     .merge-btn:hover {
       transform: scale(1.05);
       box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+    }
+    /* Back Burner button - flame icon with gradient */
+    .back-burner-btn {
+      padding: 0.35rem;
+      background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .back-burner-btn svg { width: 16px; height: 16px; }
+    .back-burner-btn:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      color: #fff;
+      border-color: #f59e0b;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+    .back-burner-btn.active {
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      color: #fff;
+      border-color: #f59e0b;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    }
+    .back-burner-btn.active:hover {
+      background: linear-gradient(135deg, #fbbf24 0%, #f87171 100%);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
+    }
+    /* Back-burnered row styling */
+    tr.back-burnered {
+      opacity: 0.4;
+      filter: grayscale(0.5);
+    }
+    tr.back-burnered:hover {
+      opacity: 0.6;
+    }
+    /* Back-burnered initiative group header */
+    tr.initiative-group-header.back-burnered-group {
+      opacity: 0.4;
+      filter: grayscale(0.5);
+    }
+    tr.initiative-group-header.back-burnered-group:hover {
+      opacity: 0.6;
+    }
+    /* Agent status indicator - read-only text display */
+    .agent-status-cell {
+      white-space: nowrap;
+      font-size: 0.75rem;
+    }
+    .agent-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .agent-status svg { width: 14px; height: 14px; }
+    .agent-status.pending {
+      background: rgba(107, 114, 128, 0.2);
+      color: var(--text-muted);
+    }
+    .agent-status.running {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+    .agent-status.running svg { animation: spin 1s linear infinite; }
+    .agent-status.complete {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+    .agent-status.failed {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .agent-status-empty {
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+    .back-burner-cell {
+      text-align: center;
+      width: 40px;
     }
     /* Row loading overlay */
     .row-loading-overlay {
@@ -1637,7 +1900,42 @@
   <div class="app">
     <header class="header">
       <div class="header-left">
-        <a href="/" class="logo-link"><img src="/images/orderup.png" alt="Order Up!" class="logo-img" /></a>
+        <a href="cursor://file/Users/brandonevery/Projects/order-up" class="logo-link" title="Open Order Up in Cursor"><img src="/images/orderup.png" alt="Order Up!" class="logo-img" /></a>
+        <div class="game-stats" id="game-stats">
+          <div class="game-stats__scores">
+            <div class="game-stats__player">
+              <span class="game-stats__player-label">1UP</span>
+              <span class="game-stats__player-score" id="stat-score">000000</span>
+            </div>
+            <div class="game-stats__high">
+              <span class="game-stats__high-label">HIGH SCORE</span>
+              <span class="game-stats__high-value" id="stat-high-score">000000</span>
+            </div>
+          </div>
+          <div class="game-stats__counters">
+            <div class="game-stats__counter">
+              <span class="game-stats__counter-label">SERVED</span>
+              <span class="game-stats__counter-value game-stats__value--served" id="stat-served">00</span>
+            </div>
+            <div class="game-stats__counter">
+              <span class="game-stats__counter-label">BUGS</span>
+              <span class="game-stats__counter-value game-stats__value--bugs" id="stat-bugs">00</span>
+            </div>
+            <div class="game-stats__counter">
+              <span class="game-stats__counter-label">COMMENTS</span>
+              <span class="game-stats__counter-value game-stats__value--comments" id="stat-comments">00</span>
+            </div>
+            <div class="game-stats__counter">
+              <span class="game-stats__counter-label">CONFLICTS</span>
+              <span class="game-stats__counter-value game-stats__value--conflicts" id="stat-conflicts">00</span>
+            </div>
+            <div class="game-stats__counter">
+              <span class="game-stats__counter-label">REVIEWS</span>
+              <span class="game-stats__counter-value game-stats__value--reviews" id="stat-reviews">00</span>
+            </div>
+          </div>
+          <button type="button" class="game-stats__reset" id="stats-reset" title="Reset all stats">RESET</button>
+        </div>
         <span class="meta" id="updated">—</span>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1871,9 +2169,11 @@
     var INITIATIVES_CACHE_KEY = 'prWatcher_cachedInitiatives';
     var INITIATIVE_FOCUS_KEY = 'prWatcher_initiativeFocus';
     var INITIATIVE_ORDER_KEY = 'prWatcher_initiativeOrder';
+    var BACK_BURNER_KEY = 'prWatcher_backBurner';
     var cachedInitiatives = null;
     var initiativeFocuses = {};
     var initiativeOrder = [];
+    var backBurnerPRs = {}; // { "repo#number": true }
     // Try to restore from localStorage on page load
     try {
       var stored = localStorage.getItem(INITIATIVES_CACHE_KEY);
@@ -1887,6 +2187,165 @@
       var storedOrder = localStorage.getItem(INITIATIVE_ORDER_KEY);
       if (storedOrder) initiativeOrder = JSON.parse(storedOrder);
     } catch (e) {}
+    try {
+      var storedBackBurner = localStorage.getItem(BACK_BURNER_KEY);
+      if (storedBackBurner) backBurnerPRs = JSON.parse(storedBackBurner);
+    } catch (e) {}
+    
+    // Game Stats - track actions locally
+    var GAME_STATS_KEY = 'prWatcher_gameStats';
+    var HIGH_SCORE_KEY = 'prWatcher_highScore';
+    var gameStats = {
+      served: 0,    // PRs merged
+      bugs: 0,      // Check fixes initiated
+      comments: 0,  // Comment resolutions initiated
+      conflicts: 0, // Conflict resolutions initiated
+      reviews: 0    // Review requests
+    };
+    var highScore = 0;
+    // Point values for each action
+    var STAT_POINTS = {
+      served: 100,
+      bugs: 25,
+      comments: 15,
+      conflicts: 50,
+      reviews: 10
+    };
+    try {
+      var storedStats = localStorage.getItem(GAME_STATS_KEY);
+      if (storedStats) gameStats = JSON.parse(storedStats);
+    } catch (e) {}
+    try {
+      var storedHigh = localStorage.getItem(HIGH_SCORE_KEY);
+      if (storedHigh) highScore = parseInt(storedHigh, 10) || 0;
+    } catch (e) {}
+    
+    function saveGameStats() {
+      try { localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats)); } catch (e) {}
+    }
+    
+    function saveHighScore() {
+      try { localStorage.setItem(HIGH_SCORE_KEY, String(highScore)); } catch (e) {}
+    }
+    
+    function calculateScore() {
+      return (gameStats.served * STAT_POINTS.served) +
+             (gameStats.bugs * STAT_POINTS.bugs) +
+             (gameStats.comments * STAT_POINTS.comments) +
+             (gameStats.conflicts * STAT_POINTS.conflicts) +
+             (gameStats.reviews * STAT_POINTS.reviews);
+    }
+    
+    function formatArcadeNumber(num, digits) {
+      var s = String(num);
+      while (s.length < digits) s = '0' + s;
+      return s;
+    }
+    
+    function renderGameStats() {
+      var el;
+      var score = calculateScore();
+      
+      // Update high score if current score beats it
+      if (score > highScore) {
+        highScore = score;
+        saveHighScore();
+      }
+      
+      // Counters
+      el = document.getElementById('stat-served');
+      if (el) el.textContent = formatArcadeNumber(gameStats.served, 2);
+      el = document.getElementById('stat-bugs');
+      if (el) el.textContent = formatArcadeNumber(gameStats.bugs, 2);
+      el = document.getElementById('stat-comments');
+      if (el) el.textContent = formatArcadeNumber(gameStats.comments, 2);
+      el = document.getElementById('stat-conflicts');
+      if (el) el.textContent = formatArcadeNumber(gameStats.conflicts, 2);
+      el = document.getElementById('stat-reviews');
+      if (el) el.textContent = formatArcadeNumber(gameStats.reviews, 2);
+      
+      // 1UP Score (current score)
+      el = document.getElementById('stat-score');
+      if (el) el.textContent = formatArcadeNumber(score, 6);
+      
+      // High Score
+      el = document.getElementById('stat-high-score');
+      if (el) el.textContent = formatArcadeNumber(highScore, 6);
+    }
+    
+    function incrementStat(statName) {
+      if (gameStats.hasOwnProperty(statName)) {
+        var oldScore = calculateScore();
+        var wasHighScore = highScore;
+        
+        gameStats[statName]++;
+        saveGameStats();
+        renderGameStats();
+        
+        var newScore = calculateScore();
+        
+        // Trigger bump animation on counter
+        var el = document.getElementById('stat-' + statName);
+        if (el) {
+          el.classList.remove('bump');
+          void el.offsetWidth; // Force reflow
+          el.classList.add('bump');
+        }
+        // Also bump 1UP score
+        var scoreEl = document.getElementById('stat-score');
+        if (scoreEl) {
+          scoreEl.classList.remove('bump');
+          void scoreEl.offsetWidth;
+          scoreEl.classList.add('bump');
+        }
+        // If new high score, bump and flash the high score
+        if (newScore > wasHighScore) {
+          var highEl = document.getElementById('stat-high-score');
+          if (highEl) {
+            highEl.classList.remove('bump');
+            void highEl.offsetWidth;
+            highEl.classList.add('bump');
+          }
+          // Show toast for new high score
+          if (wasHighScore > 0) {
+            showToast('NEW HIGH SCORE! ' + formatArcadeNumber(newScore, 6));
+          }
+        }
+      }
+    }
+    
+    function resetGameStats() {
+      gameStats = { served: 0, bugs: 0, comments: 0, conflicts: 0, reviews: 0 };
+      saveGameStats();
+      renderGameStats();
+    }
+    
+    // Render stats on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      renderGameStats();
+      var resetBtn = document.getElementById('stats-reset');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+          if (confirm('Reset all game stats to zero?')) {
+            resetGameStats();
+            showToast('Stats reset!');
+          }
+        });
+      }
+    });
+    
+    function isBackBurner(repo, number) {
+      return backBurnerPRs[repo + '#' + number] === true;
+    }
+    function toggleBackBurner(repo, number) {
+      var key = repo + '#' + number;
+      if (backBurnerPRs[key]) {
+        delete backBurnerPRs[key];
+      } else {
+        backBurnerPRs[key] = true;
+      }
+      try { localStorage.setItem(BACK_BURNER_KEY, JSON.stringify(backBurnerPRs)); } catch (e) {}
+    }
     function getInitiativeFocus(name) {
       return initiativeFocuses[name] || '';
     }
@@ -1902,18 +2361,55 @@
     function buildCopyText(repo, number, kind, context) {
       if (!repo || !number) return '';
       var link = prLink(repo, number);
+      var statusReminder = '\n\n**IMPORTANT**: After completing, report status to Order Up:\ncurl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"complete","type":"' + kind + '","summary":"Done"}\'';
+      
       if (kind === 'comments') {
         var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
-        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link;
+        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link + statusReminder;
       }
       // For checks, include which check category is failing
       var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
-      return 'Use /handle-pr-checks for PR #' + number + checkText + ': ' + link;
+      return 'Use /handle-pr-checks for PR #' + number + checkText + ': ' + link + statusReminder;
     }
 
-    /** Build rebase command for resolving conflicts */
-    function buildRebaseCommand(branch) {
-      return 'git fetch origin && git rebase origin/main';
+    /** Build comprehensive rebase/conflict resolution instructions */
+    function buildRebaseCommand(repo, number, branch) {
+      var instructions = '# Resolve Merge Conflicts for PR #' + number + '\n\n';
+      instructions += '## Steps to resolve:\n\n';
+      instructions += '1. First, fetch latest and start rebase:\n';
+      instructions += '```bash\n';
+      instructions += 'git fetch origin\n';
+      instructions += 'git rebase origin/main\n';
+      instructions += '```\n\n';
+      instructions += '2. For each conflicted file:\n';
+      instructions += '   - Open the file and look for conflict markers: `<<<<<<<`, `=======`, `>>>>>>>`\n';
+      instructions += '   - **IMPORTANT**: Keep BOTH the existing logic AND the new changes where applicable\n';
+      instructions += '   - Don\'t just pick one side - merge the intent of both changes\n';
+      instructions += '   - Remove all conflict markers when done\n\n';
+      instructions += '3. After resolving each file:\n';
+      instructions += '```bash\n';
+      instructions += 'git add <resolved-file>\n';
+      instructions += 'git rebase --continue\n';
+      instructions += '```\n\n';
+      instructions += '4. If you get stuck or make a mistake:\n';
+      instructions += '```bash\n';
+      instructions += 'git rebase --abort  # Start over\n';
+      instructions += '```\n\n';
+      instructions += '5. After all conflicts resolved, force push (required after rebase):\n';
+      instructions += '```bash\n';
+      instructions += 'git push --force-with-lease\n';
+      instructions += '```\n\n';
+      instructions += '## Common conflict scenarios:\n';
+      instructions += '- **Import conflicts**: Keep all unique imports from both sides\n';
+      instructions += '- **Function changes**: Merge logic from both - don\'t lose either side\'s changes\n';
+      instructions += '- **Package.json**: Keep all dependencies, resolve version conflicts to latest\n\n';
+      
+      if (repo && number) {
+        instructions += '**IMPORTANT**: After completing, report status to Order Up:\n';
+        instructions += 'curl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"complete","type":"conflicts","summary":"Conflicts resolved"}\'\n';
+      }
+      
+      return instructions;
     }
 
     /** Check if PR has merge conflicts */
@@ -1927,10 +2423,9 @@
     }
 
     /** Build conflicts banner HTML when PR has merge conflicts */
-    function buildConflictsBanner(path) {
+    function buildConflictsBanner(path, repo, number, branch) {
       return '<div class="conflicts-banner">' +
-        '<span class="conflicts-banner__text">Branch has conflicts</span>' +
-        '<button type="button" class="conflicts-banner__btn" data-resolve-conflicts data-path="' + escapeAttr(path || '') + '" title="Copy rebase command and open in Cursor">' +
+        '<button type="button" class="conflicts-banner__btn" data-resolve-conflicts data-path="' + escapeAttr(path || '') + '" data-repo="' + escapeAttr(repo || '') + '" data-number="' + (number || '') + '" data-branch="' + escapeAttr(branch || '') + '" title="Copy rebase instructions and open in Cursor">' +
         'Resolve conflicts' +
         '</button>' +
         '</div>';
@@ -1973,7 +2468,7 @@
       var title = category === 'lint' ? 'Lint' : category === 'type' ? 'Type' : category === 'test' ? 'Test' : category === 'e2e' ? 'E2E' : 'Other';
       if (status === 'success') return '<span class="check-icon pass" title="Pass">✓</span>';
       if (status === 'failure' && repo != null && number != null) {
-        var cursorUrl = (path && path.trim()) ? ('cursor://file/' + escapeAttr(path)) : '#';
+        var cursorUrl = (path && path.trim()) ? ('cursor://file/' + escapeUri(path)) : '#';
         return '<a href="' + cursorUrl + '" class="check-icon fail fix-check" data-path="' + escapeAttr(path || '') + '" data-repo="' + escapeHtml(repo) + '" data-number="' + number + '" data-check="' + escapeHtml(category) + '" title="Fix ' + title + (path ? ' (opens Cursor)' : '') + '">✗</a>';
       }
       if (status === 'failure') return '<span class="check-icon fail" title="Fail">✗</span>';
@@ -1983,9 +2478,9 @@
     function previewLinks(p) {
       if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
       var parts = [];
-      if (p.viewer) parts.push('<a href="' + escapeAttr(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
-      if (p.creator) parts.push('<a href="' + escapeAttr(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
-      if (p.storybook) parts.push('<a href="' + escapeAttr(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+      if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
+      if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
+      if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
       return '<div class="preview-links">' + parts.join('') + '</div>';
     }
     function mergeCell(mergeable, mergeStateStatus) {
@@ -2047,6 +2542,40 @@
     // Global list of available initiatives for the picker dropdown
     var availableInitiativeNames = [];
     
+    // Global agent jobs state - tracks running/completed agent jobs per PR
+    var agentJobs = {};
+    
+    function getAgentStatusHtml(repo, number) {
+      var key = repo + '#' + number;
+      var job = agentJobs[key];
+      if (!job) return '<span class="agent-status-empty">—</span>';
+      
+      var icon = 'loader-2';
+      var statusClass = job.status;
+      var text = 'Pending';
+      var title = '';
+      
+      if (job.status === 'running') {
+        icon = 'loader-2';
+        text = 'Running...';
+        title = 'Agent working on ' + (job.type || 'fixes');
+      } else if (job.status === 'complete') {
+        icon = 'check';
+        text = job.summary || 'Done';
+        title = job.summary || 'Agent completed';
+      } else if (job.status === 'failed') {
+        icon = 'alert-circle';
+        text = 'Failed';
+        title = job.error || 'Agent failed';
+      } else if (job.status === 'pending') {
+        icon = 'clock';
+        text = 'Pending';
+        title = 'Waiting for agent to start';
+      }
+      
+      return '<span class="agent-status ' + statusClass + '" title="' + escapeAttr(title) + '"><i data-lucide="' + icon + '"></i> ' + escapeHtml(text) + '</span>';
+    }
+    
     function buildInitPickerDropdown(pr) {
       var branch = pr.branch || pr.headRefName || '';
       var repo = pr.repo || '';
@@ -2081,7 +2610,7 @@
         initCell = buildInitPickerDropdown(pr);
       } else {
         var initLink = path
-          ? '<a href="cursor://file/' + escapeAttr(path) + '" class="init" title="Open in Cursor">' + escapeHtml(initLabel) + '</a>'
+          ? '<a href="cursor://file/' + escapeUri(path) + '" class="init" title="Open in Cursor">' + escapeHtml(initLabel) + '</a>'
           : '<span class="check-icon none">' + escapeHtml(initLabel) + '</span>';
         initCell = icon ? '<span class="initiative-with-icon">' + icon + initLink + '</span>' : initLink;
       }
@@ -2089,7 +2618,7 @@
         ? '<span class="comments-unresolved">' + pr.unresolved + '</span>'
         : '<span class="check-icon none">0</span>';
       var commentsHtml = (path && path.trim())
-        ? '<a href="cursor://file/' + escapeAttr(path) + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="Open in Cursor">' + commentsContent + '</a>'
+        ? '<a href="cursor://file/' + escapeUri(path) + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="Open in Cursor">' + commentsContent + '</a>'
         : commentsContent;
       var hasIssues = pr.unresolved > 0 || c.lint === 'failure' || c.type === 'failure' || c.test === 'failure' || c.e2e === 'failure' || c.other === 'failure' || hasConflicts(pr);
       // Store issue context as data attributes for the copy command
@@ -2099,7 +2628,7 @@
       if (c.test === 'failure') failingChecks.push('test');
       if (c.e2e === 'failure') failingChecks.push('e2e');
       if (c.other === 'failure') failingChecks.push('other');
-      var finishBtn = hasIssues ? '<button type="button" class="finish-him-btn" title="Copy command to fix all issues" data-failing-checks="' + escapeAttr(failingChecks.join(',')) + '" data-unresolved="' + (pr.unresolved || 0) + '" data-has-conflicts="' + (hasConflicts(pr) ? '1' : '0') + '">86 THE BUGS</button>' : '';
+      var finishBtn = hasIssues ? '<button type="button" class="finish-him-btn" title="86 THE BUGS - Fix all issues" data-failing-checks="' + escapeAttr(failingChecks.join(',')) + '" data-unresolved="' + (pr.unresolved || 0) + '" data-has-conflicts="' + (hasConflicts(pr) ? '1' : '0') + '"><i data-lucide="bug"></i></button>' : '';
       // Show REVIEW NOW or MERGE button depending on approval status
       var allChecksPassing = c.lint !== 'failure' && c.type !== 'failure' && c.test !== 'failure' && c.e2e !== 'failure' && c.other !== 'failure';
       var readyForReview = !hasIssues && allChecksPassing && pr.mergeable !== false;
@@ -2110,15 +2639,19 @@
       }
       var reviewBtn = '';
       if (readyForReview && isApproved) {
-        // PR is approved - show MERGE button
-        reviewBtn = '<button type="button" class="merge-btn" title="Merge this PR" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '">SERVE IT</button>';
+        // PR is approved - show MERGE button (utensils icon for "SERVE IT")
+        reviewBtn = '<button type="button" class="merge-btn" title="SERVE IT - Merge this PR" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '"><i data-lucide="utensils"></i></button>';
       } else if (readyForReview) {
-        // PR needs review - show REVIEW NOW button
-        reviewBtn = '<button type="button" class="review-now-btn" title="Copy review request message" data-title="' + escapeAttr(pr.title || '') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '">CALL THE CHEF</button>';
+        // PR needs review - show REVIEW NOW button (chef-hat icon for "CALL THE CHEF")
+        reviewBtn = '<button type="button" class="review-now-btn" title="CALL THE CHEF - Request review" data-title="' + escapeAttr(pr.title || '') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '"><i data-lucide="chef-hat"></i></button>';
       }
-      var forkBtn = path ? '<button type="button" class="fork-btn" title="Open in Fork" data-path="' + escapeAttr(path) + '"><i data-lucide="git-branch"></i></button>' : '';
-      var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + finishBtn + reviewBtn + '</span>';
-      var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path) : '';
+      var forkBtn = path ? '<button type="button" class="fork-btn" title="Open in Fork app" data-path="' + escapeAttr(path) + '"><i data-lucide="git-fork"></i></button>' : '';
+      var isOnBackBurner = isBackBurner(pr.repo, pr.number);
+      var backBurnerBtn = '<button type="button" class="back-burner-btn' + (isOnBackBurner ? ' active' : '') + '" title="' + (isOnBackBurner ? 'Move back to active' : 'Move to back burner') + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '"><i data-lucide="flame"></i></button>';
+      var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a></span>';
+      var agentStatusHtml = getAgentStatusHtml(pr.repo, pr.number);
+      var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + finishBtn + reviewBtn + '</div>';
+      var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path, pr.repo, pr.number, pr.branch) : '';
       var checksHtml = '<div class="checks-container">' +
         '<span class="check-icon-wrap">' + checkCell(c.lint, path, pr.repo, pr.number, 'lint') + '</span>' +
         '<span class="check-icon-wrap">' + checkCell(c.type, path, pr.repo, pr.number, 'type') + '</span>' +
@@ -2130,9 +2663,12 @@
       var titleDisplay = '<span class="pr-title" title="' + escapeAttr(pr.title) + '">' + escapeHtml(pr.title.slice(0, 60)) + (pr.title.length > 60 ? '…' : '') + '</span>';
       return '<td>' + initCell + '</td>' +
         '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? '<br><code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
+        '<td class="agent-status-cell">' + agentStatusHtml + '</td>' +
+        '<td class="actions-col">' + actionsCell + '</td>' +
         '<td>' + commentsHtml + '</td>' +
         '<td class="checks-cell" colspan="5">' + checksHtml + '</td>' +
-        '<td>' + previewLinks(pr.previews) + '</td>';
+        '<td>' + previewLinks(pr.previews) + '</td>' +
+        '<td class="back-burner-cell">' + backBurnerBtn + '</td>';
     }
 
     function sortInitiativesByOrder(initiatives) {
@@ -2195,7 +2731,7 @@
           '</span>';
         var label = escapeHtml(name);
         if (path) {
-          html += '<a href="cursor://file/' + escapeAttr(path) + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Open ' + escapeAttr(name) + ' in Cursor">' + iconWithEdit + '<span>' + label + '</span></a>';
+          html += '<a href="cursor://file/' + escapeUri(path) + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Open ' + escapeAttr(name) + ' in Cursor">' + iconWithEdit + '<span>' + label + '</span></a>';
         } else {
           html += '<a href="#" class="initiative-card initiative-card--nolink" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Create and open ' + escapeAttr(name) + '">' + iconWithEdit + '<span>' + label + '</span></a>';
         }
@@ -2274,12 +2810,12 @@
       function previewLinks(p) {
         if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
         const parts = [];
-        if (p.viewer) parts.push('<a href="' + escapeAttr(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
-        if (p.creator) parts.push('<a href="' + escapeAttr(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
-        if (p.storybook) parts.push('<a href="' + escapeAttr(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+        if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
+        if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
+        if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
         return '<div class="preview-links">' + parts.join('') + '</div>';
       }
-      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo / PR</th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th><th colspan="5" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th></tr></thead><tbody>';
+      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo / PR</th><th><span class="th-icon" title="Agent Status"><i data-lucide="bot"></i></span></th><th><span class="th-icon" title="Actions"><i data-lucide="zap"></i></span></th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th><th colspan="5" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th><th><span class="th-icon" title="Back burner"><i data-lucide="flame"></i></span></th></tr></thead><tbody>';
       // Sort initiatives by saved order (same as cards)
       var sortedTableInitiatives = sortInitiativesByOrder(data.initiatives);
       for (const init of sortedTableInitiatives) {
@@ -2287,6 +2823,11 @@
         var filteredPrs = (init.prs || []).filter(function(pr) {
           var branch = (pr.branch || pr.headRefName || '').toLowerCase();
           return branch !== 'main' && branch !== 'master';
+        });
+        var sortedPrs = sortPrsByPlatform(filteredPrs);
+        // Check if all PRs in this initiative are back-burnered
+        var allBackBurnered = filteredPrs.length > 0 && filteredPrs.every(function(pr) {
+          return isBackBurner(pr.repo, pr.number);
         });
         if (filteredPrs.length) {
           var groupLabel = init.name === '—' ? 'No initiative' : escapeHtml(init.name);
@@ -2296,12 +2837,13 @@
           var focusInput = init.name !== '—' 
             ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(init.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
             : '';
-          html += '<tr class="initiative-group-header" data-initiative="' + escapeHtml(init.name) + '"><td colspan="9"><div>' + groupCell + focusInput + '</div></td></tr>';
+          var headerClass = 'initiative-group-header' + (allBackBurnered ? ' back-burnered-group' : '');
+          html += '<tr class="' + headerClass + '" data-initiative="' + escapeHtml(init.name) + '"><td colspan="12"><div>' + groupCell + focusInput + '</div></td></tr>';
         }
-        var sortedPrs = sortPrsByPlatform(filteredPrs);
         for (const pr of sortedPrs) {
           var conflictsAttr = hasConflicts(pr) ? ' data-has-conflicts="true"' : '';
-          html += '<tr data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(pr.initiativePath || '') + '"' + conflictsAttr + '>' + buildPrRowCells(pr) + '</tr>';
+          var backBurnerClass = isBackBurner(pr.repo, pr.number) ? ' back-burnered' : '';
+          html += '<tr class="' + backBurnerClass.trim() + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(pr.initiativePath || '') + '"' + conflictsAttr + '>' + buildPrRowCells(pr) + '</tr>';
         }
       }
       html += '</tbody></table></div></div>';
@@ -2374,7 +2916,7 @@
         var r = rows[i];
         var initPath = (r.path || '').trim();
         var initLink = initPath
-          ? '<a href="cursor://file/' + escapeAttr(initPath) + '" class="init" title="Open in Cursor">' + escapeHtml(r.initiative) + '</a>'
+          ? '<a href="cursor://file/' + escapeUri(initPath) + '" class="init" title="Open in Cursor">' + escapeHtml(r.initiative) + '</a>'
           : escapeHtml(r.initiative);
         var initIcon = initiativeIconHtml(r.initiative);
         var initCellLocal = initIcon ? '<span class="initiative-with-icon">' + initIcon + initLink + '</span>' : initLink;
@@ -2396,6 +2938,11 @@
       return div.innerHTML;
     }
     function escapeAttr(s) {
+      // Escape for HTML attributes (quotes and special chars)
+      return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function escapeUri(s) {
+      // URL encode for href attributes
       return encodeURI(s || '').replace(/[#?]/g, encodeURIComponent);
     }
 
@@ -2622,6 +3169,66 @@
       }
       requestAnimationFrame(loop);
     }
+    // Load agent jobs from server
+    async function loadAgentJobs() {
+      try {
+        console.log('[Agent Jobs] Loading from server...');
+        var r = await fetch('/api/agent-jobs');
+        var jobs = await r.json();
+        agentJobs = {};
+        for (var i = 0; i < jobs.length; i++) {
+          var job = jobs[i];
+          agentJobs[job.id] = job;
+        }
+        console.log('[Agent Jobs] Loaded ' + jobs.length + ' jobs:', Object.keys(agentJobs));
+      } catch (e) {
+        console.error('[Agent Jobs] Failed to load:', e);
+      }
+    }
+    
+    // Create a pending agent job (called when copying a command)
+    function createPendingJob(repo, number, type) {
+      var id = repo + '#' + number;
+      console.log('[Agent Job] Creating pending job:', id, 'type:', type || 'all');
+      
+      // Update local state immediately
+      agentJobs[id] = {
+        id: id,
+        repo: repo,
+        number: number,
+        type: type || 'all',
+        status: 'pending',
+        startedAt: Date.now()
+      };
+      
+      // Send to server
+      console.log('[Agent Job] Sending to server...');
+      fetch('/api/agent-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: repo, number: number, status: 'pending', type: type || 'all' })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        console.log('[Agent Job] Server response:', JSON.stringify(data));
+      })
+      .catch(function(e) {
+        console.error('[Agent Job] Failed to create pending job:', e);
+      });
+      
+      // Update UI for this row - update the agent status cell
+      var row = document.querySelector('tr[data-repo="' + repo + '"][data-number="' + number + '"]');
+      console.log('[Agent Job] Found row to update:', !!row);
+      if (row) {
+        var statusCell = row.querySelector('.agent-status-cell');
+        if (statusCell) {
+          statusCell.innerHTML = getAgentStatusHtml(repo, number);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          console.log('[Agent Job] Updated status cell UI');
+        }
+      }
+    }
+    
     async function load(newlyCreatedName) {
       // Keep initiative cards visible during loading by rendering from cache
       if (cachedInitiatives && cachedInitiatives.length > 0) {
@@ -2632,6 +3239,8 @@
       refreshBtn.disabled = true;
       refreshBtn.textContent = 'Refreshing…';
       try {
+        // Load agent jobs and status in parallel
+        await loadAgentJobs();
         const r = await fetch('/api/status');
         const data = await r.json();
         render(data, newlyCreatedName);
@@ -2666,7 +3275,7 @@
         const line = escapeHtml(e.repo) + ' <strong>#' + e.number + '</strong> · ' + summary + actor;
         const url = (e.url || '').trim();
         const body = url
-          ? '<a href="' + escapeAttr(url) + '" target="_blank" rel="noopener" class="event-body">' + line + '</a>'
+          ? '<a href="' + escapeUri(url) + '" target="_blank" rel="noopener" class="event-body">' + line + '</a>'
           : '<span class="event-body">' + line + '</span>';
         return '<li><span class="event-time">' + escapeHtml(time) + '</span>' + body + '</li>';
       }).join('');
@@ -3353,44 +3962,128 @@
         
         // Get issue context from button data attributes
         var failingChecks = (finishBtn.getAttribute('data-failing-checks') || '').split(',').filter(Boolean);
-        var unresolved = parseInt(finishBtn.getAttribute('data-unresolved') || '0', 10);
+        var unresolvedCount = parseInt(finishBtn.getAttribute('data-unresolved') || '0', 10);
         var hasConflictsFlag = finishBtn.getAttribute('data-has-conflicts') === '1';
         
-        // Build comprehensive command
-        var link = prLink(repo, num);
-        var issues = [];
-        if (failingChecks.length > 0) {
-          issues.push('failing checks: ' + failingChecks.join(', '));
-        }
-        if (unresolved > 0) {
-          issues.push(unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : ''));
-        }
-        if (hasConflictsFlag) {
-          issues.push('merge conflicts');
-        }
-        var issuesSummary = issues.length > 0 ? ' (' + issues.join('; ') + ')' : '';
-        var cmd = 'Fix all issues on PR #' + num + issuesSummary + ': ' + link;
-        if (failingChecks.length > 0) {
-          cmd += '\n\nUse /handle-pr-checks to fix the failing ' + failingChecks.join(', ') + ' check' + (failingChecks.length > 1 ? 's' : '') + '.';
-        }
-        if (unresolved > 0) {
-          cmd += '\n\nUse /handle-pr-comments to address the ' + unresolved + ' unresolved comment' + (unresolved > 1 ? 's' : '') + '.';
-        }
-        if (hasConflictsFlag) {
-          cmd += '\n\nResolve merge conflicts with: git fetch origin && git rebase origin/main';
-        }
+        // Create pending job for agent tracking
+        createPendingJob(repo, parseInt(num, 10), 'all');
         
-        // Copy and show feedback
-        copyCommand(cmd, 'All issues command copied!');
-        finishBtn.textContent = 'COPIED!';
-        setTimeout(function() {
-          finishBtn.textContent = '86 THE BUGS';
-        }, 1500);
+        // Show loading state
+        finishBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        finishBtn.disabled = true;
         
-        // Open in Cursor if path available
-        if (path && path.trim()) {
-          window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
-        }
+        // Fetch all details in parallel
+        var checksPromise = failingChecks.length > 0 
+          ? fetch('/api/check-failures?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+              .then(function(r) { return r.json(); })
+              .catch(function() { return { failures: [] }; })
+          : Promise.resolve({ failures: [] });
+        
+        var commentsPromise = unresolvedCount > 0
+          ? fetch('/api/pr-comments?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+              .then(function(r) { return r.json(); })
+              .catch(function() { return { comments: [] }; })
+          : Promise.resolve({ comments: [] });
+        
+        Promise.all([checksPromise, commentsPromise]).then(function(results) {
+          var checksData = results[0];
+          var commentsData = results[1];
+          var failures = checksData.failures || [];
+          var comments = commentsData.comments || [];
+          
+          // Build comprehensive command with all details
+          var link = prLink(repo, num);
+          var issues = [];
+          if (failingChecks.length > 0) {
+            issues.push('failing checks: ' + failingChecks.join(', '));
+          }
+          if (unresolvedCount > 0) {
+            issues.push(unresolvedCount + ' unresolved comment' + (unresolvedCount > 1 ? 's' : ''));
+          }
+          if (hasConflictsFlag) {
+            issues.push('merge conflicts');
+          }
+          var issuesSummary = issues.length > 0 ? ' (' + issues.join('; ') + ')' : '';
+          var cmd = 'Fix all issues on PR #' + num + issuesSummary + ': ' + link;
+          
+          // Add check failures with details
+          if (failures.length > 0) {
+            cmd += '\n\n## Failing Checks\n';
+            cmd += 'Use /handle-pr-checks to fix these:\n';
+            for (var i = 0; i < failures.length; i++) {
+              var f = failures[i];
+              cmd += '\n### ' + f.name + ' (' + f.conclusion + ')';
+              if (f.errors && f.errors.length > 0) {
+                cmd += '\nErrors:';
+                for (var j = 0; j < f.errors.length; j++) {
+                  cmd += '\n- ' + f.errors[j];
+                }
+              } else if (f.annotations && f.annotations.length > 0) {
+                cmd += '\nErrors:';
+                for (var j = 0; j < f.annotations.length; j++) {
+                  var ann = f.annotations[j];
+                  cmd += '\n- ' + ann.path + (ann.line ? ':' + ann.line : '') + ': ' + ann.message;
+                }
+              }
+            }
+          } else if (failingChecks.length > 0) {
+            cmd += '\n\nUse /handle-pr-checks to fix the failing ' + failingChecks.join(', ') + ' check' + (failingChecks.length > 1 ? 's' : '') + '.';
+          }
+          
+          // Add unresolved comments with details
+          if (comments.length > 0) {
+            cmd += '\n\n## Unresolved Comments\n';
+            cmd += 'Use /handle-pr-comments to address these:\n';
+            for (var i = 0; i < comments.length; i++) {
+              var c = comments[i];
+              cmd += '\n### ' + (i + 1) + '. ' + (c.path ? c.path + (c.line ? ':' + c.line : '') : 'General') + ' - @' + c.author;
+              cmd += '\n' + (c.body || '').split('\n').slice(0, 10).join('\n');
+              if ((c.body || '').split('\n').length > 10) {
+                cmd += '\n... (truncated)';
+              }
+            }
+          } else if (unresolvedCount > 0) {
+            cmd += '\n\nUse /handle-pr-comments to address the ' + unresolvedCount + ' unresolved comment' + (unresolvedCount > 1 ? 's' : '') + '.';
+          }
+          
+          if (hasConflictsFlag) {
+            cmd += '\n\n## Merge Conflicts\n';
+            cmd += 'This branch has conflicts with main that must be resolved.\n\n';
+            cmd += '### Steps to resolve:\n';
+            cmd += '1. Fetch latest and start rebase:\n';
+            cmd += '```bash\n';
+            cmd += 'git fetch origin && git rebase origin/main\n';
+            cmd += '```\n\n';
+            cmd += '2. For each conflicted file:\n';
+            cmd += '   - Look for conflict markers: `<<<<<<<`, `=======`, `>>>>>>>`\n';
+            cmd += '   - **IMPORTANT**: Keep BOTH the existing logic AND the new changes where applicable\n';
+            cmd += '   - Don\'t just pick one side - merge the intent of both changes\n';
+            cmd += '   - Remove all conflict markers when done\n\n';
+            cmd += '3. After resolving each file: `git add <file> && git rebase --continue`\n\n';
+            cmd += '4. When all conflicts resolved, force push (required after rebase):\n';
+            cmd += '```bash\n';
+            cmd += 'git push --force-with-lease\n';
+            cmd += '```\n\n';
+            cmd += '**TIP**: If you make a mistake, `git rebase --abort` will start over.';
+          }
+          
+          // Copy and show feedback
+          incrementStat('bugs');
+          copyCommand(cmd, 'All issues command copied!');
+          finishBtn.innerHTML = '<i data-lucide="check"></i>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          finishBtn.disabled = false;
+          setTimeout(function() {
+            finishBtn.innerHTML = '<i data-lucide="bug"></i>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+          }, 1500);
+          
+          // Open in Cursor if path available
+          if (path && path.trim()) {
+            window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+          }
+        });
         return;
       }
       // REVIEW NOW button handler - copies review request message
@@ -3413,10 +4106,13 @@
         // Build review request message - single line
         var msg = 'PR Ready for Review: ' + decodedTitle + ' ' + link;
         
+        incrementStat('reviews');
         copyCommand(msg, 'Review request copied!');
-        reviewBtn.textContent = 'COPIED!';
+        reviewBtn.innerHTML = '<i data-lucide="check"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         setTimeout(function() {
-          reviewBtn.textContent = 'CALL THE CHEF';
+          reviewBtn.innerHTML = '<i data-lucide="chef-hat"></i>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
         }, 1500);
         return;
       }
@@ -3429,7 +4125,8 @@
         e.preventDefault();
         e.stopPropagation();
         
-        mergeBtn.textContent = 'MERGING...';
+        mergeBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         mergeBtn.disabled = true;
         
         // Call merge API
@@ -3441,31 +4138,136 @@
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data.merged) {
-            mergeBtn.textContent = 'MERGED!';
+            incrementStat('served');
+            mergeBtn.innerHTML = '<i data-lucide="check"></i>';
             mergeBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            showToast('PR #' + num + ' merged successfully!');
             // Remove the row after a short delay since the PR is now merged
             setTimeout(function() {
               var row = mergeBtn.closest('tr');
               if (row) row.remove();
             }, 2000);
           } else {
-            mergeBtn.textContent = 'FAILED';
+            mergeBtn.innerHTML = '<i data-lucide="x"></i>';
             mergeBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            showToast('Merge failed: ' + (data.error || 'Unknown error'));
             setTimeout(function() {
-              mergeBtn.textContent = 'SERVE IT';
+              mergeBtn.innerHTML = '<i data-lucide="utensils"></i>';
               mergeBtn.style.background = '';
               mergeBtn.disabled = false;
+              if (typeof lucide !== 'undefined') lucide.createIcons();
             }, 2000);
           }
         })
-        .catch(function() {
-          mergeBtn.textContent = 'ERROR';
+        .catch(function(err) {
+          mergeBtn.innerHTML = '<i data-lucide="x"></i>';
           mergeBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          showToast('Merge error: ' + (err.message || 'Network error'));
           setTimeout(function() {
-            mergeBtn.textContent = 'SERVE IT';
+            mergeBtn.innerHTML = '<i data-lucide="utensils"></i>';
             mergeBtn.style.background = '';
             mergeBtn.disabled = false;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
           }, 2000);
+        });
+        return;
+      }
+      // Back Burner button handler - toggle back burner state and convert to/from draft
+      var backBurnerBtn = e.target && e.target.closest ? e.target.closest('button.back-burner-btn') : null;
+      if (backBurnerBtn) {
+        var repo = backBurnerBtn.getAttribute('data-repo');
+        var num = backBurnerBtn.getAttribute('data-number');
+        if (!repo || !num) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var wasOnBackBurner = isBackBurner(repo, parseInt(num, 10));
+        var willBeOnBackBurner = !wasOnBackBurner;
+        
+        // Update UI immediately
+        toggleBackBurner(repo, parseInt(num, 10));
+        var row = backBurnerBtn.closest('tr');
+        if (row) {
+          row.classList.toggle('back-burnered', willBeOnBackBurner);
+          backBurnerBtn.classList.toggle('active', willBeOnBackBurner);
+          backBurnerBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          backBurnerBtn.title = willBeOnBackBurner ? 'Move back to active' : 'Move to back burner';
+          
+          // Update initiative group header if all PRs are now back-burnered
+          updateInitiativeHeaderState(row);
+        }
+        
+        function updateInitiativeHeaderState(prRow) {
+          var initiative = null;
+          var prevRow = prRow.previousElementSibling;
+          while (prevRow) {
+            if (prevRow.classList.contains('initiative-group-header')) {
+              initiative = prevRow.getAttribute('data-initiative');
+              break;
+            }
+            prevRow = prevRow.previousElementSibling;
+          }
+          if (!initiative) return;
+          
+          // Find all PR rows for this initiative
+          var allPrRows = document.querySelectorAll('tr[data-repo][data-number]');
+          var initiativePrs = [];
+          var inGroup = false;
+          var headerRow = null;
+          
+          var allRows = document.querySelectorAll('tbody tr');
+          for (var i = 0; i < allRows.length; i++) {
+            var r = allRows[i];
+            if (r.classList.contains('initiative-group-header')) {
+              if (r.getAttribute('data-initiative') === initiative) {
+                inGroup = true;
+                headerRow = r;
+              } else if (inGroup) {
+                break;
+              }
+            } else if (inGroup && r.getAttribute('data-repo')) {
+              initiativePrs.push(r);
+            }
+          }
+          
+          if (headerRow && initiativePrs.length > 0) {
+            var allBackBurnered = initiativePrs.every(function(r) {
+              return r.classList.contains('back-burnered');
+            });
+            headerRow.classList.toggle('back-burnered-group', allBackBurnered);
+          }
+        }
+        
+        // Convert PR to/from draft on GitHub
+        fetch('/api/toggle-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo: repo, number: parseInt(num, 10), makeDraft: willBeOnBackBurner })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          backBurnerBtn.innerHTML = '<i data-lucide="flame"></i>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          if (!data.success) {
+            // Revert on failure
+            toggleBackBurner(repo, parseInt(num, 10));
+            if (row) row.classList.toggle('back-burnered', wasOnBackBurner);
+            backBurnerBtn.classList.toggle('active', wasOnBackBurner);
+            updateInitiativeHeaderState(row);
+          }
+        })
+        .catch(function() {
+          // Revert on error
+          backBurnerBtn.innerHTML = '<i data-lucide="flame"></i>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          toggleBackBurner(repo, parseInt(num, 10));
+          if (row) row.classList.toggle('back-burnered', wasOnBackBurner);
+          backBurnerBtn.classList.toggle('active', wasOnBackBurner);
+          updateInitiativeHeaderState(row);
         });
         return;
       }
@@ -3532,16 +4334,69 @@
         var check = a.getAttribute('data-check');
         if (repo && num) {
           e.preventDefault();
-          copyCommand(buildCopyText(repo, num, 'checks', { check: check }), 'Checks command copied!');
-          var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
-          if (path && path.trim()) body.path = path.trim();
-          fetch('/api/fix-check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            keepalive: true
-          }).catch(function() {});
-          if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+          
+          // Create pending job for agent tracking
+          createPendingJob(repo, parseInt(num, 10), 'checks');
+          
+          // Fetch actual failure details and include in clipboard
+          fetch('/api/check-failures?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num) + (check ? '&check=' + encodeURIComponent(check) : ''))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              var failures = data.failures || [];
+              var failureText = '';
+              if (failures.length > 0) {
+                failureText = '\n\nFailing checks:\n';
+                for (var i = 0; i < failures.length; i++) {
+                  var f = failures[i];
+                  failureText += '\n' + (i + 1) + '. ' + f.name + ' (' + f.conclusion + ')';
+                  // Show parsed error messages from logs first
+                  if (f.errors && f.errors.length > 0) {
+                    failureText += '\n   Errors from logs:';
+                    for (var j = 0; j < f.errors.length; j++) {
+                      failureText += '\n   - ' + f.errors[j];
+                    }
+                  }
+                  // Fall back to annotations if no log errors found
+                  else if (f.annotations && f.annotations.length > 0) {
+                    failureText += '\n   Errors:';
+                    for (var j = 0; j < f.annotations.length; j++) {
+                      var ann = f.annotations[j];
+                      failureText += '\n   - ' + ann.path + (ann.line ? ':' + ann.line : '') + ': ' + ann.message;
+                    }
+                  }
+                  else if (f.summary) {
+                    failureText += '\n   Summary: ' + f.summary.split('\n')[0];
+                  }
+                }
+              }
+              var cmd = buildCopyText(repo, num, 'checks', { check: check }) + failureText;
+              copyCommand(cmd, 'Checks command copied!');
+              
+              // Trigger fix agent
+              var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
+              if (path && path.trim()) body.path = path.trim();
+              fetch('/api/fix-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                keepalive: true
+              }).catch(function() {});
+              
+              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+            })
+            .catch(function() {
+              // Fallback to just the command without failure details
+              copyCommand(buildCopyText(repo, num, 'checks', { check: check }), 'Checks command copied!');
+              var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
+              if (path && path.trim()) body.path = path.trim();
+              fetch('/api/fix-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                keepalive: true
+              }).catch(function() {});
+              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+            });
         }
         return;
       }
@@ -3555,17 +4410,52 @@
           var unresolved = parseInt(commentsLink.getAttribute('data-unresolved') || '0', 10);
           e.preventDefault();
           e.stopPropagation();
-          copyCommand(buildCopyText(repo, num, 'comments', { unresolved: unresolved }), 'Comments command copied!');
-          if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+          
+          // Create pending job for agent tracking
+          createPendingJob(repo, parseInt(num, 10), 'comments');
+          incrementStat('comments');
+          
+          // Fetch actual comments and include in clipboard
+          fetch('/api/pr-comments?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              var comments = data.comments || [];
+              var commentText = '';
+              if (comments.length > 0) {
+                commentText = '\n\nUnresolved comments:\n';
+                for (var i = 0; i < comments.length; i++) {
+                  var c = comments[i];
+                  commentText += '\n' + (i + 1) + '. ' + (c.path ? c.path + (c.line ? ':' + c.line : '') + ' - ' : '') + '@' + c.author + ':\n   ' + (c.body || '').split('\n').join('\n   ') + '\n';
+                }
+              }
+              var cmd = buildCopyText(repo, num, 'comments', { unresolved: unresolved }) + commentText;
+              copyCommand(cmd, 'Comments command copied!');
+              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+            })
+            .catch(function() {
+              // Fallback to just the command without comment details
+              copyCommand(buildCopyText(repo, num, 'comments', { unresolved: unresolved }), 'Comments command copied!');
+              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+            });
         }
         return;
       }
       var resolveBtn = e.target && e.target.closest ? e.target.closest('button[data-resolve-conflicts]') : null;
       if (resolveBtn) {
         var path = resolveBtn.getAttribute('data-path') || '';
+        var repo = resolveBtn.getAttribute('data-repo') || '';
+        var num = resolveBtn.getAttribute('data-number') || '';
+        var branch = resolveBtn.getAttribute('data-branch') || '';
         e.preventDefault();
         e.stopPropagation();
-        copyCommand(buildRebaseCommand(), 'Rebase command copied!');
+        
+        // Create pending job for conflict resolution
+        if (repo && num) {
+          createPendingJob(repo, parseInt(num, 10), 'conflicts');
+        }
+        incrementStat('conflicts');
+        
+        copyCommand(buildRebaseCommand(repo, num, branch), 'Rebase instructions copied!');
         if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
         return;
       }
@@ -3966,6 +4856,53 @@
           }
           
           showToast('PR #' + pr.number + ' updated');
+        }
+      });
+      
+      // Agent status updates
+      sseConnection.addEventListener('agent-status', function(e) {
+        var job = JSON.parse(e.data);
+        console.log('[SSE Agent Status] Received update:', JSON.stringify(job));
+        console.log('[SSE Agent Status] Job details - repo:', job.repo, 'number:', job.number, 'status:', job.status, 'type:', job.type);
+        
+        // Update the global agent jobs state
+        if (job.status === 'cleared') {
+          console.log('[SSE Agent Status] Clearing job from state:', job.id);
+          delete agentJobs[job.id];
+        } else {
+          console.log('[SSE Agent Status] Updating job in state:', job.id);
+          agentJobs[job.id] = job;
+        }
+        
+        // Find and update the row in the table
+        var row = document.querySelector('tr[data-repo="' + job.repo + '"][data-number="' + job.number + '"]');
+        console.log('[SSE Agent Status] Found matching row:', !!row);
+        if (row) {
+          // Update the agent status cell
+          var statusCell = row.querySelector('.agent-status-cell');
+          console.log('[SSE Agent Status] Found status cell:', !!statusCell);
+          if (statusCell) {
+            var newHtml = getAgentStatusHtml(job.repo, job.number);
+            console.log('[SSE Agent Status] Updating cell HTML:', newHtml.substring(0, 100) + '...');
+            statusCell.innerHTML = newHtml;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+          }
+          
+          // Flash the row and show toast
+          row.style.transition = 'background-color 0.3s';
+          if (job.status === 'complete') {
+            row.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+            showToast('Agent complete for PR #' + job.number + (job.summary ? ': ' + job.summary : ''));
+          } else if (job.status === 'failed') {
+            row.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            showToast('Agent failed for PR #' + job.number);
+          } else if (job.status === 'running') {
+            row.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+            showToast('Agent started for PR #' + job.number);
+          }
+          setTimeout(function() {
+            row.style.backgroundColor = '';
+          }, 2000);
         }
       });
       

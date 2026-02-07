@@ -18,12 +18,17 @@ let sseClientId = 0;
 
 function broadcastSSE(event: string, data: unknown) {
   const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  let sentCount = 0;
   for (const client of sseClients) {
     try {
       client.res.write(message);
+      sentCount++;
     } catch {
       // Client disconnected, will be cleaned up
     }
+  }
+  if (event === "agent-status") {
+    console.log(`[SSE Broadcast] Sent '${event}' to ${sentCount}/${sseClients.length} clients`);
   }
 }
 
@@ -388,20 +393,34 @@ async function getPRCheckCategories(repo: string, number: number): Promise<PRSta
   const shaOut = await runAllowExit("gh", ["pr", "view", String(number), "--repo", repo, "--json", "headRefOid", "-q", ".headRefOid"]);
   const sha = shaOut?.trim();
   if (!sha) return empty;
-  const out = await runAllowExit("gh", [
-    "api",
-    `repos/${owner}/${repoName}/commits/${sha}/check-runs?per_page=100`,
-  ]);
+  
   type Run = { name: string; conclusion: string | null; status: string };
-  let runs: Run[] = [];
-  if (out) {
+  const runs: Run[] = [];
+  let page = 1;
+  const maxPages = 10; // Safety limit
+  
+  // Paginate through all check runs
+  while (page <= maxPages) {
+    const out = await runAllowExit("gh", [
+      "api",
+      `repos/${owner}/${repoName}/commits/${sha}/check-runs?per_page=100&page=${page}`,
+    ]);
+    
+    if (!out) break;
+    
     try {
       const data = JSON.parse(out) as { check_runs?: Run[] };
-      runs = Array.isArray(data.check_runs) ? data.check_runs : [];
+      const pageRuns = Array.isArray(data.check_runs) ? data.check_runs : [];
+      runs.push(...pageRuns);
+      
+      // If we got less than 100, we've reached the end
+      if (pageRuns.length < 100) break;
+      page++;
     } catch {
-      runs = [];
+      break;
     }
   }
+  
   const byCat: Record<CheckCategory, { success: number; failure: number; pending: number }> = {
     lint: { success: 0, failure: 0, pending: 0 },
     type: { success: 0, failure: 0, pending: 0 },
@@ -534,7 +553,7 @@ app.post("/api/fix-check", (req, res) => {
   res.status(202).json({ accepted: true, message: "Fix agent started" });
 });
 
-// POST /api/merge — merge a PR (repo + number). Only succeeds when PR is mergeable (gh pr merge).
+// POST /api/merge — merge a PR (repo + number). Uses squash merge. Only succeeds when PR is mergeable.
 app.post("/api/merge", async (req, res) => {
   const repo = req.body?.repo;
   const number = req.body?.number;
@@ -543,8 +562,351 @@ app.post("/api/merge", async (req, res) => {
     return;
   }
   try {
-    await run("gh", ["pr", "merge", String(number), "--repo", repo]);
+    console.log(`Merging PR #${number} in ${repo}...`);
+    // Use --squash for squash merge, --delete-branch to clean up
+    const result = await run("gh", ["pr", "merge", String(number), "--repo", repo, "--squash", "--delete-branch"]);
+    console.log(`Merge result for PR #${number}:`, result);
+    
+    // Verify the PR is actually merged by checking its state
+    const verifyOut = await runAllowExit("gh", ["pr", "view", String(number), "--repo", repo, "--json", "state"]);
+    if (verifyOut) {
+      const state = JSON.parse(verifyOut);
+      if (state.state === "MERGED") {
+        console.log(`PR #${number} confirmed merged`);
+        res.json({ merged: true });
+        return;
+      }
+    }
+    
+    // If we get here, the merge command succeeded but state isn't MERGED yet - still return success
+    // as gh pr merge is synchronous and waits for completion
     res.json({ merged: true });
+  } catch (e) {
+    console.error(`Merge failed for PR #${number}:`, e);
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// GET /api/pr-comments — fetch unresolved review comments for a PR
+app.get("/api/pr-comments", async (req, res) => {
+  const repo = req.query.repo as string;
+  const number = req.query.number;
+  const num = typeof number === "string" ? parseInt(number, 10) : Number(number);
+  if (!repo || !Number.isInteger(num)) {
+    res.status(400).json({ error: "Missing or invalid repo or number" });
+    return;
+  }
+  try {
+    const [owner, repoName] = repo.split("/");
+    
+    // Helper to run GraphQL query with pagination support
+    async function fetchGraphQL(query: string, variables: Record<string, unknown>): Promise<string> {
+      const body = JSON.stringify({ query, variables });
+      return new Promise<string>((resolve) => {
+        const proc = spawn("gh", ["api", "graphql", "--input", "-"], { cwd: ROOT });
+        let out = "";
+        proc.stdout?.on("data", (d) => (out += d.toString()));
+        proc.stderr?.on("data", () => {});
+        proc.on("close", () => resolve(out.trim()));
+        proc.stdin?.write(body);
+        proc.stdin?.end();
+      });
+    }
+    
+    interface ReviewThread {
+      isResolved: boolean;
+      path: string;
+      line?: number;
+      comments?: {
+        nodes?: { body: string; author?: { login: string } }[];
+      };
+    }
+    
+    interface GraphQLResponse {
+      data?: {
+        repository?: {
+          pullRequest?: {
+            reviewThreads?: {
+              pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+              nodes?: ReviewThread[];
+            };
+          };
+        };
+      };
+    }
+    
+    // Paginated query to get all review threads
+    const paginatedQuery = 'query($owner:String!, $repo:String!, $number:Int!, $cursor:String) { repository(owner:$owner, name:$repo) { pullRequest(number:$number) { reviewThreads(first:100, after:$cursor) { pageInfo { hasNextPage endCursor } nodes { isResolved path line comments(first:1) { nodes { body author { login } } } } } } } }';
+    
+    const allThreads: ReviewThread[] = [];
+    let cursor: string | null = null;
+    let pageCount = 0;
+    const maxPages = 10; // Safety limit
+    
+    // Fetch all pages
+    while (pageCount < maxPages) {
+      const graphqlOut = await fetchGraphQL(paginatedQuery, { 
+        owner, 
+        repo: repoName, 
+        number: num, 
+        cursor 
+      });
+      
+      if (!graphqlOut) {
+        console.log(`PR #${num}: No GraphQL output received on page ${pageCount + 1}`);
+        break;
+      }
+      
+      try {
+        const data = JSON.parse(graphqlOut) as GraphQLResponse;
+        const reviewThreads = data.data?.repository?.pullRequest?.reviewThreads;
+        const threads = reviewThreads?.nodes || [];
+        allThreads.push(...threads);
+        
+        pageCount++;
+        console.log(`PR #${num}: Page ${pageCount} - fetched ${threads.length} threads (total: ${allThreads.length})`);
+        
+        // Check if there are more pages
+        if (reviewThreads?.pageInfo?.hasNextPage && reviewThreads?.pageInfo?.endCursor) {
+          cursor = reviewThreads.pageInfo.endCursor;
+        } else {
+          break;
+        }
+      } catch (e) {
+        console.error("Error parsing GraphQL response:", e, "Raw output:", graphqlOut?.substring(0, 500));
+        break;
+      }
+    }
+    
+    const comments: { author: string; path: string; line?: number; body: string }[] = [];
+    
+    console.log(`PR #${num}: Found ${allThreads.length} total review threads`);
+    for (const thread of allThreads) {
+      // Only include unresolved threads
+      if (!thread.isResolved) {
+        const firstComment = thread.comments?.nodes?.[0];
+        if (firstComment) {
+          comments.push({
+            author: firstComment.author?.login || "unknown",
+            path: thread.path || "",
+            line: thread.line,
+            body: firstComment.body || "",
+          });
+        }
+      }
+    }
+    console.log(`PR #${num}: ${comments.length} unresolved comments found`)
+    
+    res.json({ repo, number: num, comments });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// GET /api/check-failures — fetch failure details for PR checks
+app.get("/api/check-failures", async (req, res) => {
+  const repo = req.query.repo as string;
+  const number = req.query.number;
+  const checkType = req.query.check as string | undefined; // lint, type, test, e2e, other
+  const num = typeof number === "string" ? parseInt(number, 10) : Number(number);
+  if (!repo || !Number.isInteger(num)) {
+    res.status(400).json({ error: "Missing or invalid repo or number" });
+    return;
+  }
+  try {
+    const [owner, repoName] = repo.split("/");
+    
+    // Get the PR's head SHA
+    const prOut = await runAllowExit("gh", ["pr", "view", String(num), "--repo", repo, "--json", "headRefOid"]);
+    let headSha = "";
+    try {
+      const prData = JSON.parse(prOut) as { headRefOid?: string };
+      headSha = prData.headRefOid || "";
+    } catch {}
+    
+    if (!headSha) {
+      res.json({ repo, number: num, failures: [] });
+      return;
+    }
+    
+    interface CheckRun {
+      id: number;
+      name: string;
+      conclusion: string | null;
+      status: string;
+      output?: {
+        title?: string;
+        summary?: string;
+        text?: string;
+        annotations_count?: number;
+      };
+    }
+    
+    // Get check runs for this commit with pagination
+    const allCheckRuns: CheckRun[] = [];
+    let page = 1;
+    const maxPages = 10; // Safety limit
+    
+    while (page <= maxPages) {
+      const checksOut = await runAllowExit("gh", [
+        "api",
+        `repos/${owner}/${repoName}/commits/${headSha}/check-runs?per_page=100&page=${page}`,
+      ]);
+      
+      if (!checksOut) break;
+      
+      try {
+        const data = JSON.parse(checksOut) as { check_runs?: CheckRun[]; total_count?: number };
+        const runs = data.check_runs || [];
+        allCheckRuns.push(...runs);
+        
+        console.log(`PR #${num}: Check runs page ${page} - fetched ${runs.length} (total: ${allCheckRuns.length})`);
+        
+        // If we got less than 100, we've reached the end
+        if (runs.length < 100) break;
+        page++;
+      } catch {
+        break;
+      }
+    }
+    
+    const failures: { name: string; conclusion: string; summary?: string; annotations: { path: string; line?: number; message: string }[]; errors?: string[] }[] = [];
+    
+    // Filter to failed checks
+    const failedRuns = allCheckRuns.filter(run => 
+      run.conclusion === "failure" || run.conclusion === "cancelled" || run.conclusion === "timed_out"
+    );
+    
+    // Optionally filter by check type
+    console.log(`PR #${num}: ${failedRuns.length} failed runs out of ${allCheckRuns.length} total, filtering by checkType: ${checkType || 'none'}`);
+    console.log(`PR #${num}: Failed run names:`, failedRuns.map(r => r.name));
+    
+    const filteredRuns = checkType ? failedRuns.filter(run => {
+      const name = run.name.toLowerCase();
+      let match = false;
+      if (checkType === "lint") match = name.includes("lint") || name.includes("eslint") || name.includes("prettier");
+      else if (checkType === "type") match = name.includes("type") || name.includes("tsc") || name.includes("typescript");
+      else if (checkType === "test") match = name.includes("test") && !name.includes("e2e");
+      else if (checkType === "e2e") match = name.includes("e2e") || name.includes("playwright") || name.includes("cypress");
+      else match = true; // 'other' gets all
+      console.log(`PR #${num}: Check "${run.name}" (${name}) matches "${checkType}": ${match}`);
+      return match;
+    }) : failedRuns;
+    
+    console.log(`PR #${num}: After filtering: ${filteredRuns.length} runs`);
+    
+    for (const run of filteredRuns) {
+      let errorMessages: string[] = [];
+      
+      // Try to fetch job logs to get actual error messages
+      try {
+        const logsOut = await runAllowExit("gh", [
+          "api",
+          `repos/${owner}/${repoName}/actions/jobs/${run.id}/logs`,
+        ]);
+        
+        if (logsOut) {
+          // Parse the logs looking for error patterns
+          const lines = logsOut.split('\n');
+          const errors: string[] = [];
+          
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            // Remove timestamp prefix (e.g., "2026-02-06T23:52:17.3841184Z ")
+            const content = line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s*/, '');
+            
+            // Look for common error patterns
+            if (content.includes('[31m✖[39m') || // Red X in ANSI
+                content.includes('✖') ||
+                content.includes('Error:') ||
+                content.includes('error TS') ||
+                content.includes('FAILED:') ||
+                content.match(/^\s*×/) ||
+                content.match(/error\s+[A-Z]+\d+:/i)) {
+              // Clean up ANSI codes
+              const cleanLine = content
+                .replace(/\[\d+m/g, '')
+                .replace(/\[39m/g, '')
+                .replace(/\[31m/g, '')
+                .replace(/\[32m/g, '')
+                .replace(/\[33m/g, '')
+                .trim();
+              if (cleanLine && cleanLine.length > 10 && !cleanLine.includes('##[error]Process completed')) {
+                errors.push(cleanLine);
+              }
+            }
+          }
+          
+          // Deduplicate and limit
+          errorMessages = [...new Set(errors)].slice(0, 15);
+        }
+      } catch (e) {
+        console.log(`Error fetching logs for ${run.name}:`, e);
+      }
+      
+      // Also fetch annotations as fallback
+      let annotations: { path: string; line?: number; message: string }[] = [];
+      if (errorMessages.length === 0) {
+        try {
+          const annotationsOut = await runAllowExit("gh", [
+            "api",
+            `repos/${owner}/${repoName}/check-runs/${run.id}/annotations?per_page=50`,
+          ]);
+          
+          interface Annotation {
+            path: string;
+            start_line?: number;
+            annotation_level: string;
+            message: string;
+            title?: string;
+          }
+          
+          const annotationsData = JSON.parse(annotationsOut) as Annotation[];
+          annotations = annotationsData
+            .filter(a => a.annotation_level === "failure" || a.annotation_level === "warning")
+            .filter(a => !a.message?.includes("Process completed with exit code"))
+            .slice(0, 10)
+            .map(a => ({
+              path: a.path,
+              line: a.start_line,
+              message: a.message || a.title || "",
+            }));
+        } catch {}
+      }
+      
+      failures.push({
+        name: run.name,
+        conclusion: run.conclusion || "unknown",
+        summary: run.output?.summary?.substring(0, 500),
+        annotations,
+        errors: errorMessages,
+      });
+    }
+    
+    res.json({ repo, number: num, failures });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/toggle-draft — convert PR to/from draft
+app.post("/api/toggle-draft", async (req, res) => {
+  const repo = req.body?.repo;
+  const number = req.body?.number;
+  const makeDraft = req.body?.makeDraft; // true = convert to draft, false = mark ready
+  if (typeof repo !== "string" || !repo || typeof number !== "number" || !Number.isInteger(number)) {
+    res.status(400).json({ error: "Missing or invalid repo or number" });
+    return;
+  }
+  try {
+    if (makeDraft) {
+      // Convert to draft
+      await run("gh", ["pr", "ready", String(number), "--repo", repo, "--undo"]);
+    } else {
+      // Mark as ready for review
+      await run("gh", ["pr", "ready", String(number), "--repo", repo]);
+    }
+    res.json({ success: true, isDraft: makeDraft });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
@@ -760,6 +1122,93 @@ setInterval(() => {
     }
   }
 }, 60000);
+
+// Agent job tracking for PR fixes (comments, checks, etc.)
+interface AgentJob {
+  id: string; // `${repo}#${number}`
+  repo: string;
+  number: number;
+  type: "comments" | "checks" | "conflicts" | "all";
+  status: "pending" | "running" | "complete" | "failed";
+  startedAt: number;
+  completedAt?: number;
+  summary?: string;
+  error?: string;
+}
+const agentJobs = new Map<string, AgentJob>();
+
+// Clean up completed agent jobs after 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, job] of agentJobs) {
+    if (job.completedAt && now - job.completedAt > 10 * 60 * 1000) {
+      agentJobs.delete(id);
+    }
+  }
+}, 60000);
+
+// POST /api/agent-job — report agent job status (called by Cursor agents)
+app.post("/api/agent-job", (req, res) => {
+  try {
+    console.log(`[Agent Job API] Received request:`, JSON.stringify(req.body));
+    
+    const { repo, number, status, type, summary, error } = req.body || {};
+    if (!repo || !number || !status) {
+      console.log(`[Agent Job API] Missing required fields - repo: ${repo}, number: ${number}, status: ${status}`);
+      res.status(400).json({ error: "Missing required fields: repo, number, status" });
+      return;
+    }
+    const id = `${repo}#${number}`;
+    const existing = agentJobs.get(id);
+    
+    console.log(`[Agent Job API] Processing job ${id}: ${existing ? 'updating existing' : 'creating new'}`);
+    
+    const job: AgentJob = {
+      id,
+      repo,
+      number: parseInt(number, 10),
+      type: type || existing?.type || "all",
+      status,
+      startedAt: existing?.startedAt || Date.now(),
+      completedAt: status === "complete" || status === "failed" ? Date.now() : undefined,
+      summary: summary || existing?.summary,
+      error: error || existing?.error,
+    };
+    
+    agentJobs.set(id, job);
+    
+    // Broadcast status change via SSE
+    console.log(`[Agent Job API] Broadcasting SSE event 'agent-status' to ${sseClients.length} connected clients`);
+    broadcastSSE("agent-status", job);
+    
+    console.log(`[Agent Job API] ✓ Job ${id}: ${status}${summary ? ` - ${summary}` : ""}${error ? ` (error: ${error})` : ""}`);
+    res.json(job);
+  } catch (e) {
+    console.error("[Agent Job API] Error:", e);
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// GET /api/agent-jobs — get all active agent jobs
+app.get("/api/agent-jobs", (_req, res) => {
+  const jobs = Array.from(agentJobs.values());
+  res.json(jobs);
+});
+
+// DELETE /api/agent-job/:repo/:number — clear a specific agent job
+app.delete("/api/agent-job/:repo/:number", (req, res) => {
+  const repo = decodeURIComponent(req.params.repo);
+  const number = req.params.number;
+  const id = `${repo}#${number}`;
+  
+  if (agentJobs.has(id)) {
+    agentJobs.delete(id);
+    broadcastSSE("agent-status", { id, repo, number: parseInt(number, 10), status: "cleared" });
+    res.json({ success: true, id });
+  } else {
+    res.status(404).json({ error: "Job not found" });
+  }
+});
 
 // GET /api/creation-status/:name — poll for creation job status
 app.get("/api/creation-status/:name", (req, res) => {

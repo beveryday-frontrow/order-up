@@ -7,6 +7,33 @@ description: Handle unresolved PR comments by fetching them via gh CLI, addressi
 
 Automatically fetch, address, and resolve unresolved PR review comments using GitHub CLI.
 
+## Status Reporting
+
+**IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.
+
+### On Start (run immediately after getting PR info):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"running","type":"comments"}'
+```
+
+### On Complete (run after all comments resolved):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"complete","type":"comments","summary":"Resolved X comments"}'
+```
+
+### On Failure (if you cannot complete):
+```bash
+curl -X POST http://localhost:3333/api/agent-job \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"{OWNER}/{REPO}","number":{PR_NUMBER},"status":"failed","type":"comments","error":"Brief description of why"}'
+```
+
+Replace `{OWNER}`, `{REPO}`, `{PR_NUMBER}`, and the summary/error messages with actual values.
+
 ## Workflow
 
 Follow these steps to handle all unresolved PR comments:
