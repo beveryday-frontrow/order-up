@@ -24,12 +24,7 @@
     },
     "asar": true,
     "asarUnpack": [
-      "server.ts",
-      "tsconfig.json",
-      "node_modules/tsx/**/*",
-      "node_modules/typescript/**/*",
-      "node_modules/express/**/*",
-      "node_modules/**/.bin/*"
+      "**/*"
     ],
     "files": [
       "electron-main.cjs",

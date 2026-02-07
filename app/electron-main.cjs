@@ -71,10 +71,13 @@ function startServer() {
     args = ["--import", "tsx", serverScript];
   }
 
+  // Use unpacked dir as cwd (asar paths aren't real directories)
+  const cwd = fs.existsSync(unpackedDir) ? unpackedDir : __dirname;
   console.log(`[server] Starting: ${cmd} ${args.join(" ")}`);
+  console.log(`[server] cwd: ${cwd}`);
 
   serverProcess = spawn(cmd, args, {
-    cwd: __dirname,
+    cwd: cwd,
     env: { ...process.env, PORT: String(PORT), ELECTRON_RUN_AS_NODE: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -101,6 +104,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: "Order Up!",
+    show: false,
     titleBarStyle: "hiddenInset",
     backgroundColor: "#0f172a",
     icon: appIcon,
@@ -116,6 +120,13 @@ function createWindow() {
   }
 
   mainWindow.loadURL(`http://localhost:${PORT}`);
+
+  // Ensure window is visible and centered
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.center();
+    mainWindow.show();
+    mainWindow.focus();
+  });
 
   // Handle external links (cursor://, https://, fork:// etc.)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
