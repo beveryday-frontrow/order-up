@@ -28,7 +28,7 @@ function broadcastSSE(event: string, data: unknown) {
       // Client disconnected, will be cleaned up
     }
   }
-  if (event === "agent-status") {
+  if (event === "agent-status" || event === "agent-stream" || event === "agent-complete" || event === "agent-session-created") {
     console.log(`[SSE Broadcast] Sent '${event}' to ${sentCount}/${sseClients.length} clients`);
   }
 }
@@ -141,6 +141,14 @@ interface PreviewUrls {
   storybook?: string;
 }
 
+type PreviewDeployState = "pending" | "building" | "deployed" | "failed";
+
+interface PreviewDeployStatus {
+  viewer?: PreviewDeployState;
+  creator?: PreviewDeployState;
+  storybook?: PreviewDeployState;
+}
+
 interface PRStatus {
   repo: string;
   number: number;
@@ -150,6 +158,7 @@ interface PRStatus {
   unresolved: number;
   checks: { lint: CategoryStatus; type: CategoryStatus; test: CategoryStatus; e2e: CategoryStatus; other: CategoryStatus };
   previews?: PreviewUrls;
+  previewDeployStatus?: PreviewDeployStatus;
   initiativePath?: string;
   initiativeName?: string;
   /** true = no conflicts, false = has conflicts, null = unknown */
@@ -450,18 +459,24 @@ function categorizeCheck(name: string): CheckCategory {
   return "other";
 }
 
-async function getPRCheckCategories(repo: string, number: number): Promise<PRStatus["checks"]> {
-  const empty: PRStatus["checks"] = {
+interface CheckCategoriesResult {
+  checks: PRStatus["checks"];
+  previewDeployStatus: PreviewDeployStatus;
+}
+
+async function getPRCheckCategories(repo: string, number: number): Promise<CheckCategoriesResult> {
+  const emptyChecks: PRStatus["checks"] = {
     lint: null,
     type: null,
     test: null,
     e2e: null,
     other: null,
   };
+  const emptyResult: CheckCategoriesResult = { checks: emptyChecks, previewDeployStatus: {} };
   const [owner, repoName] = repo.split("/");
   const shaOut = await runAllowExit("gh", ["pr", "view", String(number), "--repo", repo, "--json", "headRefOid", "-q", ".headRefOid"]);
   const sha = shaOut?.trim();
-  if (!sha) return empty;
+  if (!sha) return emptyResult;
   
   type Run = { name: string; conclusion: string | null; status: string };
   const runs: Run[] = [];
@@ -497,7 +512,23 @@ async function getPRCheckCategories(repo: string, number: number): Promise<PRSta
     e2e: { success: 0, failure: 0, pending: 0 },
     other: { success: 0, failure: 0, pending: 0 },
   };
+
+  // Track preview deployment check runs separately
+  const previewDeploy: PreviewDeployStatus = {};
+
   for (const r of runs) {
+    // Check if this is a preview deployment run
+    const previewType = categorizePreviewDeploy(r.name);
+    if (previewType) {
+      const state = checkRunToDeployState(r);
+      // For each preview type, take the most "active" state:
+      // building > pending > failed > deployed (i.e., if any job is still building, show building)
+      const current = previewDeploy[previewType];
+      if (!current || deployStatePriority(state) > deployStatePriority(current)) {
+        previewDeploy[previewType] = state;
+      }
+    }
+
     const cat = categorizeCheck(r.name);
     if (r.status !== "completed") byCat[cat].pending++;
     else if (r.conclusion === "success" || r.conclusion === "skipped" || r.conclusion === "neutral") byCat[cat].success++;
@@ -511,16 +542,53 @@ async function getPRCheckCategories(repo: string, number: number): Promise<PRSta
     return null;
   };
   return {
-    lint: toStatus(byCat.lint),
-    type: toStatus(byCat.type),
-    test: toStatus(byCat.test),
-    e2e: toStatus(byCat.e2e),
-    other: toStatus(byCat.other),
+    checks: {
+      lint: toStatus(byCat.lint),
+      type: toStatus(byCat.type),
+      test: toStatus(byCat.test),
+      e2e: toStatus(byCat.e2e),
+      other: toStatus(byCat.other),
+    },
+    previewDeployStatus: previewDeploy,
   };
 }
 
+// Identify if a check run is a preview deployment and which type
+function categorizePreviewDeploy(name: string): keyof PreviewDeployStatus | null {
+  const n = name.toLowerCase();
+  // Match storybook first (more specific) before viewer/creator
+  if (/storybook/.test(n) && /preview|deploy/.test(n)) return "storybook";
+  if (/preview/.test(n) && /viewer/.test(n)) return "viewer";
+  if (/preview/.test(n) && /creator/.test(n)) return "creator";
+  // Also match deploy workflow names
+  if (/deploy\s*preview.*viewer/i.test(n)) return "viewer";
+  if (/deploy\s*preview.*creator/i.test(n)) return "creator";
+  return null;
+}
+
+// Map a check run's status/conclusion to a deploy state
+function checkRunToDeployState(run: { status: string; conclusion: string | null }): PreviewDeployState {
+  if (run.status === "queued" || run.status === "waiting") return "pending";
+  if (run.status === "in_progress") return "building";
+  if (run.status === "completed") {
+    if (run.conclusion === "success" || run.conclusion === "skipped" || run.conclusion === "neutral") return "deployed";
+    return "failed";
+  }
+  return "pending";
+}
+
+// Priority for merging multiple check runs of the same preview type
+function deployStatePriority(state: PreviewDeployState): number {
+  switch (state) {
+    case "building": return 3;
+    case "pending": return 2;
+    case "failed": return 1;
+    case "deployed": return 0;
+  }
+}
+
 // Webhook and API need JSON body
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 // GET /api/settings — read tool preference
 app.get("/api/settings", async (_req, res) => {
@@ -580,7 +648,7 @@ async function fetchPRData(repo: string, num: number): Promise<PRStatus | null> 
     for (const lb of localBranches) {
       repoAndBranchToInitiative.set(`${lb.repo}#${lb.branch}`, { path: lb.path, name: lb.initiative });
     }
-    const [status, titleAndHead, checks, previews, mergeState] = await Promise.all([
+    const [status, titleAndHead, checkResult, previews, mergeState] = await Promise.all([
       getPRStatus(repo, num),
       getPRTitleAndHead(repo, num),
       getPRCheckCategories(repo, num),
@@ -589,6 +657,8 @@ async function fetchPRData(repo: string, num: number): Promise<PRStatus | null> 
     ]);
     const headRefName = titleAndHead.headRefName || "";
     const init = repoAndBranchToInitiative.get(`${repo}#${headRefName}`);
+    const hasPreviews = previews.viewer || previews.creator || previews.storybook;
+    const hasDeployStatus = checkResult.previewDeployStatus.viewer || checkResult.previewDeployStatus.creator || checkResult.previewDeployStatus.storybook;
     return {
       repo,
       number: num,
@@ -596,8 +666,9 @@ async function fetchPRData(repo: string, num: number): Promise<PRStatus | null> 
       title: titleAndHead.title,
       failingChecks: status.failingChecks,
       unresolved: status.unresolved,
-      checks,
-      previews: (previews.viewer || previews.creator || previews.storybook) ? previews : undefined,
+      checks: checkResult.checks,
+      previews: hasPreviews ? previews : undefined,
+      previewDeployStatus: hasDeployStatus ? checkResult.previewDeployStatus : undefined,
       initiativePath: init?.path,
       initiativeName: init?.name,
       mergeable: mergeState.mergeable,
@@ -1125,12 +1196,13 @@ app.post("/api/fix-all-issues", async (req, res) => {
     const conflicts: { repo: string; number: number; path?: string }[] = [];
 
     for (const pr of allOpen) {
-      const [status, titleAndHead, checks, mergeState] = await Promise.all([
+      const [status, titleAndHead, checkResult, mergeState] = await Promise.all([
         getPRStatus(pr.repo, pr.number),
         getPRTitleAndHead(pr.repo, pr.number),
         getPRCheckCategories(pr.repo, pr.number),
         getPRMergeState(pr.repo, pr.number),
       ]);
+      const checks = checkResult.checks;
       const headRefName = titleAndHead.headRefName || pr.headRefName || "";
       const path = repoAndBranchToPath.get(`${pr.repo}#${headRefName}`) || "";
 
@@ -1199,11 +1271,12 @@ app.post("/api/finish-pr", async (req, res) => {
   }
   try {
     const settings = await readSettings();
-    const [status, checks, mergeState] = await Promise.all([
+    const [status, checkResult2, mergeState] = await Promise.all([
       getPRStatus(repo, number),
       getPRCheckCategories(repo, number),
       getPRMergeState(repo, number),
     ]);
+    const checks = checkResult2.checks;
 
     const spawned: { type: string }[] = [];
     const prompts: { type: string; prompt: string }[] = [];
@@ -1430,7 +1503,7 @@ app.delete("/api/agent-job/:repo/:number", (req, res) => {
   }
 });
 
-// --- Agent CLI Dispatch ---
+// --- Agent CLI & Session Management ---
 
 // Check if agent CLI is available
 let agentCliAvailable = false;
@@ -1448,6 +1521,222 @@ let agentCliBin = "agent";
   }
 })();
 
+// --- Agent Sessions (embedded chat) ---
+
+interface AgentStreamMessage {
+  type: string;        // system, assistant, tool_call, result
+  subtype?: string;    // init, started, completed, etc.
+  raw: unknown;        // full parsed JSON line from CLI
+  ts: number;
+}
+
+interface AgentSession {
+  id: string;
+  repo?: string;
+  number?: number;
+  prompt: string;
+  path: string;
+  status: "running" | "complete" | "failed" | "cancelled";
+  pid?: number;
+  messages: AgentStreamMessage[];
+  startedAt: number;
+  completedAt?: number;
+  exitCode?: number | null;
+  label?: string; // human-readable label like "Fix checks for repo#123"
+  cursorChatId?: string; // The Cursor CLI session_id, used for --resume
+}
+
+const agentSessions = new Map<string, AgentSession>();
+const agentProcesses = new Map<string, ReturnType<typeof spawn>>();
+
+// Clean up completed sessions after 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of agentSessions) {
+    if (session.completedAt && now - session.completedAt > 30 * 60 * 1000) {
+      agentSessions.delete(id);
+      agentProcesses.delete(id);
+    }
+  }
+}, 60000);
+
+let sessionIdCounter = 0;
+
+function createAgentSession(opts: {
+  path: string;
+  prompt: string;
+  repo?: string;
+  number?: number;
+  label?: string;
+  type?: AgentJob["type"];
+  resumeChatId?: string; // Cursor chatId to resume (for follow-up messages)
+}): AgentSession {
+  const sessionId = `session-${Date.now()}-${++sessionIdCounter}`;
+  const session: AgentSession = {
+    id: sessionId,
+    repo: opts.repo,
+    number: opts.number,
+    prompt: opts.prompt,
+    path: opts.path,
+    status: "running",
+    messages: [],
+    startedAt: Date.now(),
+    label: opts.label,
+    cursorChatId: opts.resumeChatId, // Will be updated from init message if new
+  };
+  agentSessions.set(sessionId, session);
+
+  // Also create/update an agentJob for backward compat with PR status indicators
+  if (opts.repo && opts.number) {
+    const jobId = `${opts.repo}#${opts.number}`;
+    const job: AgentJob = {
+      id: jobId,
+      repo: opts.repo,
+      number: opts.number,
+      type: opts.type || "all",
+      status: "running",
+      startedAt: Date.now(),
+    };
+    agentJobs.set(jobId, job);
+    broadcastSSE("agent-status", job);
+  }
+
+  // Broadcast session created BEFORE spawning so SSE clients can prepare
+  broadcastSSE("agent-session-created", {
+    id: session.id,
+    repo: session.repo,
+    number: session.number,
+    status: session.status,
+    label: session.label,
+    startedAt: session.startedAt,
+    cursorChatId: session.cursorChatId,
+  });
+
+  // Build CLI args — use --resume for follow-ups
+  const cliArgs: string[] = [];
+  if (opts.resumeChatId) {
+    cliArgs.push("--resume", opts.resumeChatId);
+    cliArgs.push("-p", opts.prompt);
+    console.log(`[Session ${sessionId}] Resuming Cursor chat ${opts.resumeChatId} in ${opts.path}`);
+  } else {
+    cliArgs.push("-p", opts.prompt);
+    console.log(`[Session ${sessionId}] Starting new agent in ${opts.path}`);
+  }
+  cliArgs.push("--force", "--output-format", "stream-json", "--stream-partial-output");
+  console.log(`[Session ${sessionId}] CLI: ${agentCliBin} ${cliArgs.join(" ").slice(0, 120)}...`);
+
+  const child = spawn(agentCliBin, cliArgs, {
+    cwd: opts.path,
+    env: { ...process.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  session.pid = child.pid;
+  agentProcesses.set(sessionId, child);
+
+  // Buffer for incomplete JSON lines
+  let stdoutBuffer = "";
+
+  child.stdout?.on("data", (data: Buffer) => {
+    stdoutBuffer += data.toString();
+    // Split by newlines - each complete line is a JSON object
+    const lines = stdoutBuffer.split("\n");
+    // Keep the last incomplete line in the buffer
+    stdoutBuffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const parsed = JSON.parse(trimmed);
+        const msg: AgentStreamMessage = {
+          type: parsed.type || "unknown",
+          subtype: parsed.subtype,
+          raw: parsed,
+          ts: Date.now(),
+        };
+        session.messages.push(msg);
+
+        // Capture the Cursor chat session_id from the init message
+        if (parsed.type === "system" && parsed.subtype === "init" && parsed.session_id) {
+          session.cursorChatId = parsed.session_id;
+          console.log(`[Session ${sessionId}] Cursor chatId: ${parsed.session_id}`);
+        }
+
+        broadcastSSE("agent-stream", { sessionId, message: msg });
+      } catch {
+        // Not valid JSON, treat as raw text
+        const msg: AgentStreamMessage = {
+          type: "raw",
+          raw: { text: trimmed },
+          ts: Date.now(),
+        };
+        session.messages.push(msg);
+        broadcastSSE("agent-stream", { sessionId, message: msg });
+      }
+    }
+  });
+
+  child.stderr?.on("data", (data: Buffer) => {
+    const text = data.toString().trim();
+    if (text) {
+      console.error(`[Session ${sessionId}] stderr: ${text}`);
+      const msg: AgentStreamMessage = {
+        type: "stderr",
+        raw: { text },
+        ts: Date.now(),
+      };
+      session.messages.push(msg);
+      broadcastSSE("agent-stream", { sessionId, message: msg });
+    }
+  });
+
+  child.on("exit", (code: number | null) => {
+    console.log(`[Session ${sessionId}] Agent exited with code ${code}`);
+    session.exitCode = code;
+    session.completedAt = Date.now();
+    session.status = code === 0 ? "complete" : (session.status === "cancelled" ? "cancelled" : "failed");
+    agentProcesses.delete(sessionId);
+
+    broadcastSSE("agent-complete", {
+      sessionId,
+      status: session.status,
+      exitCode: code,
+      durationMs: session.completedAt - session.startedAt,
+    });
+
+    // Update the associated agentJob for backward compat
+    if (opts.repo && opts.number) {
+      const jobId = `${opts.repo}#${opts.number}`;
+      const existingJob = agentJobs.get(jobId);
+      if (existingJob) {
+        existingJob.status = session.status === "complete" ? "complete" : "failed";
+        existingJob.completedAt = Date.now();
+        if (session.status !== "complete") {
+          existingJob.error = `Agent exited with code ${code}`;
+        }
+        broadcastSSE("agent-status", existingJob);
+      }
+
+      // Refresh PR data after completion
+      if (session.status === "complete") {
+        setTimeout(async () => {
+          try {
+            const pr = await fetchPRData(opts.repo!, opts.number!);
+            if (pr) {
+              broadcastSSE("pr-update", { pr });
+            }
+          } catch (e) {
+            console.error(`[Session ${sessionId}] Error refreshing PR data:`, e);
+          }
+        }, 3000);
+      }
+    }
+  });
+
+  return session;
+}
+
 // GET /api/capabilities — check what features are available
 app.get("/api/capabilities", (_req, res) => {
   res.json({
@@ -1456,9 +1745,9 @@ app.get("/api/capabilities", (_req, res) => {
   });
 });
 
-// POST /api/dispatch-agent — spawn agent CLI to run a prompt in a project directory
-app.post("/api/dispatch-agent", (req, res) => {
-  const { path: projectPath, prompt, repo, number, taskId } = req.body || {};
+// POST /api/agent-session — start a new agent session or resume an existing one
+app.post("/api/agent-session", (req, res) => {
+  const { path: projectPath, prompt, repo, number, label, type, resumeSessionId } = req.body || {};
   if (!projectPath || !prompt) {
     res.status(400).json({ error: "Missing required fields: path, prompt" });
     return;
@@ -1472,131 +1761,167 @@ app.post("/api/dispatch-agent", (req, res) => {
     return;
   }
 
-  // Create a pending job/task depending on context
-  const jobId = repo && number ? `${repo}#${number}` : taskId || null;
-  if (repo && number) {
-    const num = parseInt(number, 10);
-    const job: AgentJob = {
-      id: `${repo}#${num}`,
-      repo,
-      number: num,
-      type: "all",
-      status: "pending",
-      startedAt: Date.now(),
-    };
-    agentJobs.set(job.id, job);
-    broadcastSSE("agent-status", job);
+  // If resuming, look up the cursorChatId from the previous session
+  let resumeChatId: string | undefined;
+  if (resumeSessionId) {
+    const prevSession = agentSessions.get(resumeSessionId);
+    if (prevSession?.cursorChatId) {
+      resumeChatId = prevSession.cursorChatId;
+      console.log(`[API] Resuming session ${resumeSessionId} → Cursor chatId ${resumeChatId}`);
+    } else {
+      console.log(`[API] Resume requested but no cursorChatId found for ${resumeSessionId}`);
+    }
   }
 
-  const logId = repo && number ? `${repo}#${number}` : taskId || "task";
-  
-  // Derive the Cursor window name from the project path (last folder segment)
-  const projectName = projectPath.split("/").filter(Boolean).pop() || "";
-  
-  console.log(`[Dispatch] Sending to local Cursor IDE for "${projectName}" in ${projectPath}`);
-  broadcastSSE("agent-log", { id: logId, stream: "system", text: `Sending prompt to Cursor IDE (${projectName})`, ts: Date.now() });
-  
-  // Use AppleScript to:
-  // 1. Copy prompt to clipboard
-  // 2. Activate the right Cursor window
-  // 3. Open new composer (Cmd+I)
-  // 4. Paste (Cmd+V)
-  // 5. Send (Enter)
-  const escapedPrompt = prompt.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const appleScript = `
-    set the clipboard to "${escapedPrompt}"
-    
-    tell application "Cursor"
-      activate
-    end tell
-    
-    delay 0.5
-    
-    tell application "System Events"
-      tell process "Cursor"
-        set frontmost to true
-        set foundWindow to false
-        repeat with w in every window
-          if name of w contains "${projectName}" then
-            perform action "AXRaise" of w
-            set foundWindow to true
-            exit repeat
-          end if
-        end repeat
-        if not foundWindow then
-          -- Fall back to first window
-          if (count of windows) > 0 then
-            perform action "AXRaise" of window 1
-          end if
-        end if
-      end tell
-    end tell
-    
-    delay 0.5
-    
-    -- Open new composer (Cmd+I for agent mode)
-    tell application "System Events"
-      keystroke "i" using command down
-    end tell
-    
-    delay 1.0
-    
-    -- Paste the prompt
-    tell application "System Events"
-      keystroke "v" using command down
-    end tell
-    
-    delay 0.3
-    
-    -- Send it (Enter)
-    tell application "System Events"
-      key code 36
-    end tell
-    
-    return "Sent to Cursor"
-  `;
-  
-  const child = spawn("osascript", ["-e", appleScript], {
-    env: { ...process.env },
-    stdio: ["ignore", "pipe", "pipe"],
+  const session = createAgentSession({
+    path: projectPath,
+    prompt,
+    repo: repo || undefined,
+    number: number ? parseInt(number, 10) : undefined,
+    label: label || undefined,
+    type: type || undefined,
+    resumeChatId,
   });
-  
-  child.stdout?.on("data", (data: Buffer) => {
-    const text = data.toString().trim();
-    console.log(`[Dispatch] AppleScript: ${text}`);
-    broadcastSSE("agent-log", { id: logId, stream: "system", text: `Cursor: ${text}`, ts: Date.now() });
-  });
-  child.stderr?.on("data", (data: Buffer) => {
-    const text = data.toString().trim();
-    console.error(`[Dispatch] AppleScript error: ${text}`);
-    broadcastSSE("agent-log", { id: logId, stream: "stderr", text, ts: Date.now() });
-  });
-  child.on("exit", (code: number | null) => {
-    if (code === 0) {
-      console.log(`[Dispatch] Prompt sent to local Cursor IDE for ${logId}`);
-      broadcastSSE("agent-log", { id: logId, stream: "system", text: "Prompt sent to local Cursor agent", ts: Date.now() });
-    } else {
-      console.error(`[Dispatch] AppleScript failed with code ${code} for ${logId}`);
-      broadcastSSE("agent-log", { id: logId, stream: "stderr", text: `Failed to send to Cursor (exit ${code})`, ts: Date.now(), done: true });
-      if (jobId && repo && number) {
-        const failedJob: AgentJob = {
-          id: jobId,
-          repo,
-          number: parseInt(number, 10),
-          type: "all",
-          status: "failed",
-          startedAt: Date.now(),
-          completedAt: Date.now(),
-          error: `Failed to send to Cursor IDE`,
-        };
-        agentJobs.set(failedJob.id, failedJob);
-        broadcastSSE("agent-status", failedJob);
-      }
-    }
-  });
-  child.unref();
 
-  res.json({ dispatched: true, jobId, pid: child.pid });
+  res.json({
+    dispatched: true,
+    sessionId: session.id,
+    pid: session.pid,
+    resumed: !!resumeChatId,
+  });
+});
+
+// GET /api/agent-sessions — list all active/recent sessions
+app.get("/api/agent-sessions", (_req, res) => {
+  const sessions = Array.from(agentSessions.values()).map((s) => ({
+    id: s.id,
+    repo: s.repo,
+    number: s.number,
+    status: s.status,
+    label: s.label,
+    startedAt: s.startedAt,
+    completedAt: s.completedAt,
+    messageCount: s.messages.length,
+    cursorChatId: s.cursorChatId,
+  }));
+  res.json(sessions);
+});
+
+// GET /api/agent-session/:id — get a specific session with full message buffer
+app.get("/api/agent-session/:id", (req, res) => {
+  const id = req.params.id;
+  const session = agentSessions.get(id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  res.json({
+    id: session.id,
+    repo: session.repo,
+    number: session.number,
+    prompt: session.prompt,
+    path: session.path,
+    status: session.status,
+    label: session.label,
+    startedAt: session.startedAt,
+    completedAt: session.completedAt,
+    exitCode: session.exitCode,
+    messages: session.messages,
+    cursorChatId: session.cursorChatId,
+  });
+});
+
+// DELETE /api/agent-session/:id — kill a running session
+app.delete("/api/agent-session/:id", (req, res) => {
+  const id = req.params.id;
+  const session = agentSessions.get(id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const proc = agentProcesses.get(id);
+  if (proc && session.status === "running") {
+    session.status = "cancelled";
+    proc.kill("SIGTERM");
+    // Force kill after 5 seconds
+    setTimeout(() => {
+      try { proc.kill("SIGKILL"); } catch {}
+    }, 5000);
+  }
+
+  res.json({ success: true, id, status: session.status });
+});
+
+// POST /api/upload-image — save an image to the project for agent access
+const uploadsDir = join(tmpdir(), "orderup-uploads");
+if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+
+app.post("/api/upload-image", (req, res) => {
+  const { data, filename, projectPath } = req.body || {};
+  if (!data) {
+    res.status(400).json({ error: "Missing image data" });
+    return;
+  }
+
+  // data is a base64 data URL like "data:image/png;base64,..."
+  const match = (data as string).match(/^data:(image\/\w+);base64,(.+)$/);
+  if (!match) {
+    res.status(400).json({ error: "Invalid image data format" });
+    return;
+  }
+
+  const mimeType = match[1];
+  const base64Data = match[2];
+  const ext = mimeType.split("/")[1] || "png";
+  const safeName = (filename || `screenshot-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+  const finalName = safeName.endsWith(`.${ext}`) ? safeName : `${safeName}.${ext}`;
+
+  // Save to project path if provided, otherwise uploads dir
+  let saveDir = uploadsDir;
+  if (projectPath && existsSync(projectPath)) {
+    const projUploads = join(projectPath, ".orderup-uploads");
+    if (!existsSync(projUploads)) mkdirSync(projUploads, { recursive: true });
+    saveDir = projUploads;
+  }
+
+  const filePath = join(saveDir, finalName);
+  try {
+    writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+    console.log(`[Upload] Saved image to ${filePath}`);
+    res.json({ success: true, path: filePath, filename: finalName });
+  } catch (err: unknown) {
+    console.error("[Upload] Failed:", err);
+    res.status(500).json({ error: "Failed to save image" });
+  }
+});
+
+// POST /api/dispatch-agent — reworked: creates an agent session instead of AppleScript
+app.post("/api/dispatch-agent", (req, res) => {
+  const { path: projectPath, prompt, repo, number, taskId, label, type } = req.body || {};
+  if (!projectPath || !prompt) {
+    res.status(400).json({ error: "Missing required fields: path, prompt" });
+    return;
+  }
+  if (!agentCliAvailable) {
+    res.status(503).json({ error: "Agent CLI not available. Install with: curl https://cursor.com/install -fsSL | bash" });
+    return;
+  }
+  if (!existsSync(projectPath)) {
+    res.status(400).json({ error: `Path does not exist: ${projectPath}` });
+    return;
+  }
+
+  const session = createAgentSession({
+    path: projectPath,
+    prompt,
+    repo: repo || undefined,
+    number: number ? parseInt(number, 10) : undefined,
+    label: label || undefined,
+    type: type || undefined,
+  });
+
+  res.json({ dispatched: true, sessionId: session.id, jobId: repo && number ? `${repo}#${number}` : taskId || null, pid: session.pid });
 });
 
 // --- Initiative Tasks (non-PR agent work) ---
@@ -2079,7 +2404,7 @@ app.get("/api/status", async (_req, res) => {
 
     const prs: PRStatus[] = [];
     for (const pr of openPRs) {
-      const [status, titleAndHead, checks, previews, mergeState] = await Promise.all([
+      const [status, titleAndHead, checkResult3, previews, mergeState] = await Promise.all([
         getPRStatus(pr.repo, pr.number),
         getPRTitleAndHead(pr.repo, pr.number),
         getPRCheckCategories(pr.repo, pr.number),
@@ -2088,6 +2413,8 @@ app.get("/api/status", async (_req, res) => {
       ]);
       const headRefName = titleAndHead.headRefName || pr.headRefName || "";
       const init = repoAndBranchToInitiative.get(`${pr.repo}#${headRefName}`);
+      const hasPreviews3 = previews.viewer || previews.creator || previews.storybook;
+      const hasDeployStatus3 = checkResult3.previewDeployStatus.viewer || checkResult3.previewDeployStatus.creator || checkResult3.previewDeployStatus.storybook;
       prs.push({
         repo: pr.repo,
         number: pr.number,
@@ -2095,8 +2422,9 @@ app.get("/api/status", async (_req, res) => {
         title: titleAndHead.title,
         failingChecks: status.failingChecks,
         unresolved: status.unresolved,
-        checks,
-        previews: (previews.viewer || previews.creator || previews.storybook) ? previews : undefined,
+        checks: checkResult3.checks,
+        previews: hasPreviews3 ? previews : undefined,
+        previewDeployStatus: hasDeployStatus3 ? checkResult3.previewDeployStatus : undefined,
         initiativePath: init?.path,
         initiativeName: init?.name,
         mergeable: mergeState.mergeable,

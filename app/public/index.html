@@ -645,6 +645,57 @@
       border-color: var(--accent);
       color: #fff;
     }
+    .preview-link:hover .preview-deploy-dot {
+      border-color: rgba(255,255,255,0.5);
+    }
+
+    /* Preview deploy status dots */
+    .preview-deploy-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+      position: relative;
+      top: -0.5px;
+    }
+    .preview-deploy-dot--deployed {
+      background: #22c55e;
+      box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+    }
+    .preview-deploy-dot--building {
+      background: #eab308;
+      box-shadow: 0 0 4px rgba(234, 179, 8, 0.4);
+      animation: deploy-pulse 1.5s ease-in-out infinite;
+    }
+    .preview-deploy-dot--pending {
+      background: #a3a3a3;
+      box-shadow: 0 0 4px rgba(163, 163, 163, 0.3);
+      animation: deploy-pulse 2s ease-in-out infinite;
+    }
+    .preview-deploy-dot--failed {
+      background: #ef4444;
+      box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+    }
+    @keyframes deploy-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    /* Tint the preview link border based on deploy state */
+    .preview-link--deployed {
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+    .preview-link--building {
+      border-color: rgba(234, 179, 8, 0.4);
+    }
+    .preview-link--failed {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .preview-link--pending {
+      border-color: rgba(163, 163, 163, 0.3);
+    }
+
     td code {
       font-size: 0.8125rem;
       background: var(--surface-hover);
@@ -1412,8 +1463,9 @@
       white-space: nowrap;
     }
     .agent-banner svg { width: 12px; height: 12px; }
-    a.agent-banner, .prep-work-task-row .agent-banner { text-decoration: none; cursor: pointer; }
-    a.agent-banner:hover, .prep-work-task-row .agent-banner:hover { filter: brightness(1.2); }
+    a.agent-banner, button.agent-banner, .prep-work-task-row .agent-banner { text-decoration: none; cursor: pointer; }
+    a.agent-banner:hover, button.agent-banner:hover, .prep-work-task-row .agent-banner:hover { filter: brightness(1.2); }
+    button.agent-banner { border: 1px solid; }
     .agent-banner--pending {
       background: rgba(107, 114, 128, 0.2);
       color: #9ca3af;
@@ -2161,7 +2213,38 @@
     .initiative-card:hover {
       background: var(--surface-hover);
       border-color: var(--text-dim);
+      text-decoration: none;
     }
+    .initiative-card__buttons {
+      display: flex;
+      gap: 0.3rem;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .initiative-card__btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .initiative-card__btn svg { width: 13px; height: 13px; }
+    .initiative-card:hover .initiative-card__btn { opacity: 1; }
+    .initiative-card__btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .initiative-card__btn--cursor { text-decoration: none; }
+    .initiative-card__btn--chat { }
     .initiative-card .initiative-icon {
       width: 32px;
       height: 32px;
@@ -2553,10 +2636,866 @@
         padding: 0.05rem 0.2rem;
       }
     }
+
+    /* --- Chat Panel (slide-out from right) --- */
+    .chat-panel-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .chat-panel-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .chat-panel {
+      position: fixed;
+      top: 3vh; left: 3vw; right: 3vw; bottom: 3vh;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      z-index: 9001;
+      display: flex;
+      flex-direction: row;
+      opacity: 0;
+      transform: scale(0.97);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .chat-panel.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    /* Sidebar */
+    .chat-modal__sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .chat-modal__sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      min-height: 52px;
+      flex-shrink: 0;
+    }
+    .chat-modal__sidebar-header img {
+      width: 24px; height: 24px; border-radius: 4px;
+    }
+    .chat-modal__sidebar-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-modal__new-chat-btn {
+      margin-left: auto;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .chat-modal__new-chat-btn svg { width: 12px; height: 12px; }
+    .chat-modal__new-chat-btn:hover { background: var(--accent-hover); }
+    .chat-modal__session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.35rem 0;
+    }
+    .chat-modal__session-list::-webkit-scrollbar { width: 5px; }
+    .chat-modal__session-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    /* Session group (per PR) in sidebar */
+    .chat-sidebar__pr-group {
+      padding: 0.15rem 0;
+    }
+    .chat-sidebar__pr-group + .chat-sidebar__pr-group {
+      border-top: 1px solid var(--border);
+    }
+    .chat-sidebar__pr-label {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.85rem 0.15rem;
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .chat-sidebar__pr-label svg { width: 12px; height: 12px; }
+    .chat-sidebar__session {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.1s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      line-height: 1.3;
+    }
+    .chat-sidebar__session:hover { background: var(--surface-hover); }
+    .chat-sidebar__session.active { background: rgba(99, 102, 241, 0.1); }
+    .chat-sidebar__session.active .chat-sidebar__session-label { color: var(--accent); }
+    .chat-sidebar__session-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .chat-sidebar__session-dot--running { background: #60a5fa; animation: deploy-pulse 1.5s ease-in-out infinite; }
+    .chat-sidebar__session-dot--complete { background: #22c55e; }
+    .chat-sidebar__session-dot--failed { background: #ef4444; }
+    .chat-sidebar__session-dot--cancelled { background: #6b7280; }
+    .chat-sidebar__session-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    .chat-sidebar__session-time {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .chat-sidebar__empty {
+      padding: 1.5rem 0.85rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+    /* Main chat area (right side of modal) */
+    .chat-modal__main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .chat-panel__header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      min-height: 52px;
+      flex-shrink: 0;
+    }
+    .chat-panel__title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-panel__title small {
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+    }
+    .chat-panel__status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.6875rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+    .chat-panel__status--running {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+    .chat-panel__status--complete {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+    .chat-panel__status--failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    .chat-panel__status--cancelled {
+      background: rgba(107, 114, 128, 0.15);
+      color: #9ca3af;
+    }
+    .chat-panel__cancel-btn,
+    .chat-panel__close-btn {
+      padding: 0.3rem;
+      background: none;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .chat-panel__cancel-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .chat-panel__close-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    .chat-panel__cancel-btn svg,
+    .chat-panel__close-btn svg {
+      width: 16px; height: 16px;
+    }
+    .chat-panel__messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      scroll-behavior: smooth;
+    }
+    .chat-panel__messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-panel__messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-panel__messages::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    /* Quick-action buttons when no session active */
+    .chat-panel__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 2rem 1.5rem;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+    .chat-panel__actions-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .chat-panel__action-btn {
+      width: 100%;
+      max-width: 300px;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.15s;
+    }
+    .chat-panel__action-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+    .chat-panel__action-btn svg {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+    }
+    .chat-panel__action-btn--custom {
+      margin-top: 0.5rem;
+      border-style: dashed;
+    }
+    /* Custom prompt input area */
+    .chat-panel__input-area {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .chat-panel__input-area.visible {
+      display: flex;
+    }
+    .chat-panel__input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+    .chat-panel__input {
+      flex: 1;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      font-family: inherit;
+      resize: none;
+      min-height: 36px;
+      max-height: 120px;
+      outline: none;
+    }
+    .chat-panel__input:focus {
+      border-color: var(--accent);
+    }
+    .chat-panel__input.drag-over {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.06);
+    }
+    .chat-panel__attach-btn {
+      padding: 0.4rem;
+      background: none;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .chat-panel__attach-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+    .chat-panel__attach-btn svg {
+      width: 16px; height: 16px;
+    }
+    .chat-panel__send-btn {
+      padding: 0.4rem 0.75rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .chat-panel__send-btn:hover {
+      background: var(--accent-hover);
+    }
+    .chat-panel__send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    /* Image attachment previews */
+    .chat-panel__attachments {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .chat-panel__attachments:empty {
+      display: none;
+    }
+    .chat-attachment {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .chat-attachment img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .chat-attachment__remove {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 18px; height: 18px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .chat-attachment__remove:hover {
+      background: rgba(239, 68, 68, 0.9);
+    }
+    .chat-attachment--uploading {
+      opacity: 0.5;
+    }
+    .chat-attachment--uploading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+    }
+    /* Inline image in chat messages */
+    .chat-msg--image {
+      max-width: 280px;
+    }
+    .chat-msg--image img {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .chat-msg--image img:hover {
+      border-color: var(--accent);
+    }
+    /* Prompt images */
+    .chat-prompt__images {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .chat-prompt__images img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      cursor: pointer;
+      background: var(--bg);
+    }
+    .chat-prompt__images img:hover {
+      border-color: var(--accent);
+    }
+    /* Thinking indicator */
+    .chat-msg--thinking {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chat-msg--thinking svg {
+      width: 12px; height: 12px;
+      flex-shrink: 0;
+    }
+    .chat-msg--thinking .thinking-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chat-msg--thinking.active .thinking-dots::after {
+      content: '';
+      animation: thinking-dots 1.4s infinite;
+    }
+    @keyframes thinking-dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+    .chat-msg--thinking .thinking-body {
+      display: none;
+      margin-top: 0.35rem;
+      padding: 0.35rem 0.5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+      font-style: italic;
+    }
+    .chat-msg--thinking.expanded .thinking-body {
+      display: block;
+    }
+    .chat-msg--thinking .thinking-chevron {
+      margin-left: auto;
+      transition: transform 0.15s;
+    }
+    .chat-msg--thinking.expanded .thinking-chevron {
+      transform: rotate(90deg);
+    }
+    /* Collapsed previous conversation turns */
+    .chat-history-turn {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .chat-history-turn__header {
+      padding: 0.5rem 0.75rem;
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .chat-history-turn__header:hover {
+      background: var(--surface-hover);
+    }
+    .chat-history-turn__header svg {
+      width: 12px; height: 12px;
+      flex-shrink: 0;
+    }
+    .chat-history-turn__prompt {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .chat-history-turn__prompt img {
+      height: 16px;
+      width: 16px;
+      border-radius: 3px;
+      object-fit: cover;
+      vertical-align: middle;
+      margin-left: 0.25rem;
+    }
+    .chat-history-turn__summary {
+      font-size: 0.6875rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .chat-history-turn__chevron {
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+    .chat-history-turn.expanded .chat-history-turn__chevron {
+      transform: rotate(90deg);
+    }
+    .chat-history-turn__body {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      background: var(--bg);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .chat-history-turn__body .chat-msg {
+      font-size: 0.75rem;
+    }
+    .chat-history-turn.expanded .chat-history-turn__body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .chat-history-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      color: var(--text-dim);
+      font-size: 0.6875rem;
+      padding: 0.25rem 0;
+    }
+    .chat-history-divider::before,
+    .chat-history-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    /* Chat messages */
+    .chat-msg {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      flex-shrink: 0;
+    }
+    .chat-msg--system {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(99, 102, 241, 0.06);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chat-msg--system svg {
+      width: 12px; height: 12px;
+      flex-shrink: 0;
+    }
+    .chat-msg--assistant {
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .chat-msg--assistant code {
+      background: rgba(99, 102, 241, 0.1);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+    }
+    .chat-msg--assistant pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+      font-size: 0.75rem;
+    }
+    .chat-msg--tool {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .chat-msg--tool-header {
+      padding: 0.5rem 0.6rem;
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .chat-msg--tool-header:hover {
+      background: var(--border);
+    }
+    .chat-msg--tool-header svg {
+      width: 12px; height: 12px;
+      flex-shrink: 0;
+    }
+    .chat-msg--tool-header .tool-chevron {
+      margin-left: auto;
+      transition: transform 0.15s;
+    }
+    .chat-msg--tool-header.expanded .tool-chevron {
+      transform: rotate(90deg);
+    }
+    .chat-msg--tool-body {
+      display: none;
+      padding: 0.5rem 0.6rem;
+      background: var(--bg);
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .chat-msg--tool-body.expanded {
+      display: block;
+    }
+    .chat-msg--result {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chat-msg--result.success {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+    .chat-msg--result.failed {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .chat-msg--result svg {
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+    }
+    .chat-msg--stderr {
+      color: #f87171;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(239, 68, 68, 0.06);
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .chat-msg--raw {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: monospace;
+      padding: 0.2rem 0.4rem;
+    }
+    /* Git commit card */
+    .chat-msg--commit {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      background: rgba(34, 197, 94, 0.06);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+    }
+    .chat-msg--commit svg { width: 16px; height: 16px; color: #22c55e; flex-shrink: 0; margin-top: 1px; }
+    .chat-msg--commit-body { flex: 1; min-width: 0; }
+    .chat-msg--commit-msg { font-weight: 500; color: var(--text); word-break: break-word; }
+    .chat-msg--commit-meta { font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .chat-msg--commit-sha { font-family: monospace; color: #22c55e; }
+    .chat-msg--prompt {
+      color: var(--accent-hover);
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    /* Chat button on PR row */
+    .chat-btn {
+      padding: 0.35rem;
+      background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .chat-btn svg { width: 16px; height: 16px; }
+    .chat-btn:hover {
+      background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+      color: #fff;
+      border-color: #6366f1;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    }
+    .chat-btn .chat-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--surface);
+      pointer-events: none;
+    }
+    .chat-btn .chat-badge--running {
+      background: #3b82f6;
+      animation: agentPulse 1.2s ease-in-out infinite;
+    }
+    .chat-btn .chat-badge--complete { background: #10b981; }
+    .chat-btn .chat-badge--failed { background: #ef4444; }
+    /* Typing cursor animation for streaming text */
+    .typing-cursor::after {
+      content: '▊';
+      animation: blink 0.8s step-end infinite;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    @media (max-width: 700px) {
+      .chat-panel { top: 0; left: 0; right: 0; bottom: 0; border-radius: 0; }
+      .chat-modal__sidebar { width: 200px; }
+    }
+    @media (max-width: 500px) {
+      .chat-modal__sidebar { display: none; }
+    }
   </style>
 </head>
 <body>
   <div class="drag-bar"></div>
+  <!-- Chat Panel (slide-out from right) -->
+  <div class="chat-panel-backdrop" id="chat-panel-backdrop"></div>
+  <div class="chat-panel" id="chat-panel">
+    <!-- Sidebar -->
+    <div class="chat-modal__sidebar" id="chat-modal-sidebar">
+      <div class="chat-modal__sidebar-header">
+        <span id="chat-sidebar-icon"></span>
+        <span class="chat-modal__sidebar-title" id="chat-sidebar-title">Sessions</span>
+        <button class="chat-modal__new-chat-btn" id="chat-sidebar-new" title="Start new chat"><i data-lucide="plus"></i> New</button>
+      </div>
+      <div class="chat-modal__session-list" id="chat-sidebar-sessions"></div>
+    </div>
+    <!-- Main chat area -->
+    <div class="chat-modal__main">
+      <div class="chat-panel__header">
+        <span class="chat-panel__title" id="chat-panel-title">Agent Chat</span>
+        <span class="chat-panel__status" id="chat-panel-status" style="display:none;"></span>
+        <button class="chat-panel__cancel-btn" id="chat-panel-cancel" title="Cancel agent" style="display:none;"><i data-lucide="square"></i></button>
+        <button class="chat-panel__close-btn" id="chat-panel-close" title="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="chat-panel__messages" id="chat-panel-messages"></div>
+      <div class="chat-panel__input-area" id="chat-panel-input-area">
+        <div class="chat-panel__attachments" id="chat-panel-attachments"></div>
+        <div class="chat-panel__input-row">
+          <button class="chat-panel__attach-btn" id="chat-panel-attach" title="Attach image (or paste/drop)"><i data-lucide="paperclip"></i></button>
+          <textarea class="chat-panel__input" id="chat-panel-input" placeholder="Send a prompt to the agent... (paste or drop images)" rows="1"></textarea>
+          <button class="chat-panel__send-btn" id="chat-panel-send"><i data-lucide="send"></i> Run</button>
+        </div>
+        <input type="file" id="chat-panel-file-input" accept="image/*" multiple style="display:none;">
+      </div>
+    </div>
+  </div>
   <button class="agent-log-toggle" id="agent-log-toggle" title="Agent Log"><i data-lucide="scroll-text"></i><span class="log-badge"></span></button>
   <div class="agent-log-panel" id="agent-log-panel">
     <div class="agent-log-panel__header">
@@ -3197,7 +4136,7 @@
         cmd += '```\n';
         
         // Dispatch agent
-        dispatchAgent(path, cmd, { repo: repo, number: parseInt(number, 10), toastMessage: 'Custom command sent!' });
+        dispatchAgent(path, cmd, { repo: repo, number: parseInt(number, 10), type: 'all', toastMessage: 'Custom command sent!' });
         
         close();
       });
@@ -3329,12 +4268,19 @@
       if (status === 'pending') return '<span class="check-icon pending" title="Pending"><i data-lucide="flame"></i></span>';
       return '<span class="check-icon none" title="None">—</span>';
     }
-    function previewLinks(p) {
+    function previewDeployDot(state) {
+      if (!state) return '';
+      var cls = 'preview-deploy-dot preview-deploy-dot--' + state;
+      var label = state.charAt(0).toUpperCase() + state.slice(1);
+      return '<span class="' + cls + '" title="' + label + '"></span>';
+    }
+    function previewLinks(p, deployStatus) {
       if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
+      var ds = deployStatus || {};
       var parts = [];
-      if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
-      if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
-      if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+      if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link preview-link--' + (ds.viewer || 'none') + '" target="_blank" rel="noopener" title="Viewer' + (ds.viewer ? ' (' + ds.viewer + ')' : '') + '">' + previewDeployDot(ds.viewer) + 'Viewer</a>');
+      if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link preview-link--' + (ds.creator || 'none') + '" target="_blank" rel="noopener" title="Creator' + (ds.creator ? ' (' + ds.creator + ')' : '') + '">' + previewDeployDot(ds.creator) + 'Creator</a>');
+      if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link preview-link--' + (ds.storybook || 'none') + '" target="_blank" rel="noopener" title="Storybook' + (ds.storybook ? ' (' + ds.storybook + ')' : '') + '">' + previewDeployDot(ds.storybook) + 'Storybook</a>');
       return '<div class="preview-links">' + parts.join('') + '</div>';
     }
     function mergeCell(mergeable, mergeStateStatus) {
@@ -3393,6 +4339,20 @@
       // Strip org prefix like "FrontRowXP/"
       return (repo || '').replace(/^[^\/]+\//, '');
     }
+    // Look up the initiative path for a given repo+number from cached data
+    function lookupInitiativePath(repo, number) {
+      var num = parseInt(number, 10);
+      for (var i = 0; i < _cachedInitiatives.length; i++) {
+        var init = _cachedInitiatives[i];
+        var prs = init.prs || [];
+        for (var j = 0; j < prs.length; j++) {
+          if (prs[j].repo === repo && prs[j].number === num) {
+            return prs[j].initiativePath || init.path || '';
+          }
+        }
+      }
+      return '';
+    }
     // Global list of available initiatives for the picker dropdown
     var availableInitiativeNames = [];
     
@@ -3401,6 +4361,1488 @@
     var initiativeTasks = {}; // { id: task }
     var canDispatchAgent = false; // set by /api/capabilities on load
     var toolSettings = { tool: 'cursor-ide', agentCommand: null }; // set by /api/settings on load
+
+    // --- Chat Panel State ---
+    var chatPanelOpen = false;
+    var chatActiveSessionId = null;   // currently displayed session ID
+    var chatSessionMessages = {};     // sessionId -> [messages]
+    var chatSessionMeta = {};         // sessionId -> { repo, number, status, label, ... }
+    var chatPanelPrContext = null;    // { repo, number, path, branch } for the PR the panel is open for
+    var chatAssistantEl = null;       // reference to the current streaming assistant text element
+    var chatThinkingEl = null;        // reference to the current thinking indicator element
+    var chatAutoScroll = true;
+
+    // Chat panel DOM references (available after DOMContentLoaded, but since script is at bottom, OK)
+    var chatPanel = document.getElementById('chat-panel');
+    var chatBackdrop = document.getElementById('chat-panel-backdrop');
+    var chatPanelTitle = document.getElementById('chat-panel-title');
+    var chatPanelStatus = document.getElementById('chat-panel-status');
+    var chatPanelMessages = document.getElementById('chat-panel-messages');
+    var chatPanelCancel = document.getElementById('chat-panel-cancel');
+    var chatPanelClose = document.getElementById('chat-panel-close');
+    var chatSidebarIcon = document.getElementById('chat-sidebar-icon');
+    var chatSidebarTitle = document.getElementById('chat-sidebar-title');
+    var chatSidebarSessions = document.getElementById('chat-sidebar-sessions');
+    var chatSidebarNewBtn = document.getElementById('chat-sidebar-new');
+    var chatModalInitiative = null; // current initiative name the modal is scoped to
+    var chatPanelInputArea = document.getElementById('chat-panel-input-area');
+    var chatPanelInput = document.getElementById('chat-panel-input');
+    var chatPanelSend = document.getElementById('chat-panel-send');
+    var chatPanelAttach = document.getElementById('chat-panel-attach');
+    var chatPanelFileInput = document.getElementById('chat-panel-file-input');
+    var chatPanelAttachments = document.getElementById('chat-panel-attachments');
+    var chatPendingImages = []; // Array of { dataUrl, serverPath, filename, uploading }
+
+    // Open the chat modal. Can be called with initiative name, PR context, or session ID.
+    function openChatModal(initiativeName, focusPr, focusSessionId) {
+      chatModalInitiative = initiativeName || null;
+      chatPanelOpen = true;
+      chatPanel.classList.add('open');
+      chatBackdrop.classList.add('open');
+
+      // Update sidebar header
+      if (initiativeName) {
+        chatSidebarIcon.innerHTML = initiativeIconHtml(initiativeName);
+        chatSidebarTitle.textContent = initiativeName;
+      } else {
+        chatSidebarIcon.innerHTML = '';
+        chatSidebarTitle.textContent = 'Sessions';
+      }
+
+      // If we have a focus session, use it directly
+      if (focusSessionId && chatSessionMeta[focusSessionId]) {
+        var meta = chatSessionMeta[focusSessionId];
+        if (meta.repo && meta.number) {
+          chatPanelPrContext = { repo: meta.repo, number: String(meta.number), path: meta.path || lookupInitiativePath(meta.repo, meta.number) };
+        }
+        switchChatSession(focusSessionId);
+        renderSidebar();
+        return;
+      }
+
+      // If we have a PR context, find or prompt
+      if (focusPr) {
+        var prContext = focusPr;
+        chatPanelPrContext = prContext;
+        var existingSessionId = findSessionForPr(prContext);
+        if (existingSessionId) {
+          switchChatSession(existingSessionId);
+          renderSidebar();
+        } else {
+          fetchAndSyncSessions(function() {
+            var serverSessionId = findSessionForPr(prContext);
+            if (serverSessionId) {
+              switchChatSession(serverSessionId);
+            } else {
+              showChatQuickActions(prContext);
+            }
+            renderSidebar();
+          });
+        }
+      } else {
+        // No specific PR — show quick actions or first session
+        fetchAndSyncSessions(function() {
+          var firstSession = findFirstSessionForInitiative(initiativeName);
+          if (firstSession) {
+            var m = chatSessionMeta[firstSession];
+            chatPanelPrContext = { repo: m.repo, number: String(m.number), path: m.path || lookupInitiativePath(m.repo, m.number) };
+            switchChatSession(firstSession);
+          } else {
+            // Find first PR for this initiative and show quick actions
+            var firstPr = findFirstPrForInitiative(initiativeName);
+            if (firstPr) {
+              chatPanelPrContext = firstPr;
+              showChatQuickActions(firstPr);
+            } else {
+              chatPanelPrContext = null;
+              showChatQuickActions(null);
+            }
+          }
+          renderSidebar();
+        });
+      }
+      renderSidebar();
+    }
+
+    // Backward compat wrapper
+    function openChatPanel(prContext) {
+      // Find initiative for this PR
+      var initName = lookupInitiativeForPr(prContext);
+      openChatModal(initName, prContext, null);
+    }
+
+    // Find the initiative name for a given PR
+    function lookupInitiativeForPr(prContext) {
+      if (!prContext || !prContext.repo || !prContext.number) return null;
+      var num = parseInt(prContext.number, 10);
+      for (var i = 0; i < _cachedInitiatives.length; i++) {
+        var init = _cachedInitiatives[i];
+        var prs = init.prs || [];
+        for (var j = 0; j < prs.length; j++) {
+          if (prs[j].repo === prContext.repo && prs[j].number === num) {
+            return init.name;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Find first (most recent) session for an initiative
+    function findFirstSessionForInitiative(initName) {
+      if (!initName) return null;
+      var initPrs = getInitiativePrs(initName);
+      var bestSid = null;
+      var bestTime = 0;
+      for (var sid in chatSessionMeta) {
+        var m = chatSessionMeta[sid];
+        if (!m || !m.repo) continue;
+        for (var p = 0; p < initPrs.length; p++) {
+          if (m.repo === initPrs[p].repo && parseInt(m.number, 10) === initPrs[p].number) {
+            var t = m.startedAt || 0;
+            if (t >= bestTime) { bestSid = sid; bestTime = t; }
+          }
+        }
+      }
+      return bestSid;
+    }
+
+    // Get PRs for an initiative from cached data
+    function getInitiativePrs(initName) {
+      if (!initName) return [];
+      for (var i = 0; i < _cachedInitiatives.length; i++) {
+        if (_cachedInitiatives[i].name === initName) {
+          return (_cachedInitiatives[i].prs || []).filter(function(pr) {
+            var branch = (pr.branch || '').toLowerCase();
+            return branch !== 'main' && branch !== 'master';
+          });
+        }
+      }
+      return [];
+    }
+
+    // Find first PR for an initiative
+    function findFirstPrForInitiative(initName) {
+      var prs = getInitiativePrs(initName);
+      if (prs.length === 0) return null;
+      var pr = prs[0];
+      return { repo: pr.repo, number: String(pr.number), path: pr.initiativePath || '' };
+    }
+
+    function findSessionForPr(prContext) {
+      if (!prContext || !prContext.repo || !prContext.number) return null;
+      var targetNum = parseInt(prContext.number, 10);
+      // Find the most recent session for this PR
+      var bestSid = null;
+      var bestTime = 0;
+      for (var sid in chatSessionMeta) {
+        var m = chatSessionMeta[sid];
+        if (m && m.repo === prContext.repo && parseInt(m.number, 10) === targetNum) {
+          var t = m.startedAt || 0;
+          if (t >= bestTime) { bestSid = sid; bestTime = t; }
+        }
+      }
+      return bestSid;
+    }
+
+    function fetchAndSyncSessions(callback) {
+      fetch('/api/agent-sessions')
+        .then(function(r) { return r.json(); })
+        .then(function(sessions) {
+          if (!Array.isArray(sessions)) return;
+          for (var i = 0; i < sessions.length; i++) {
+            var s = sessions[i];
+            if (!chatSessionMeta[s.id]) {
+              chatSessionMeta[s.id] = {
+                repo: s.repo,
+                number: s.number,
+                status: s.status,
+                label: s.label || s.id,
+                startedAt: s.startedAt,
+                completedAt: s.completedAt,
+                cursorChatId: s.cursorChatId
+              };
+            } else {
+              // Update status and cursorChatId
+              chatSessionMeta[s.id].status = s.status;
+              if (s.cursorChatId) chatSessionMeta[s.id].cursorChatId = s.cursorChatId;
+            }
+            if (!chatSessionMessages[s.id]) {
+              chatSessionMessages[s.id] = [];
+            }
+          }
+          renderSidebar();
+          if (callback) callback();
+        })
+        .catch(function() {
+          if (callback) callback();
+        });
+    }
+
+    // Render the session sidebar based on current initiative
+    function renderSidebar() {
+      if (!chatSidebarSessions) return;
+      var initName = chatModalInitiative;
+      var initPrs = initName ? getInitiativePrs(initName) : [];
+
+      // If no initiative, gather all PRs with sessions
+      if (!initName) {
+        var prSet = {};
+        for (var sid in chatSessionMeta) {
+          var sm = chatSessionMeta[sid];
+          if (sm && sm.repo && sm.number) {
+            var key = sm.repo + '#' + sm.number;
+            if (!prSet[key]) prSet[key] = { repo: sm.repo, number: sm.number };
+          }
+        }
+        initPrs = Object.values(prSet);
+      }
+
+      var html = '';
+      for (var p = 0; p < initPrs.length; p++) {
+        var pr = initPrs[p];
+        var prNum = parseInt(pr.number, 10);
+        // Gather sessions for this PR
+        var prSessions = [];
+        for (var sid2 in chatSessionMeta) {
+          var m = chatSessionMeta[sid2];
+          if (m && m.repo === pr.repo && parseInt(m.number, 10) === prNum) {
+            prSessions.push({ id: sid2, meta: m });
+          }
+        }
+        // Sort by startedAt descending (most recent first)
+        prSessions.sort(function(a, b) { return (b.meta.startedAt || 0) - (a.meta.startedAt || 0); });
+
+        // PR group header
+        var platform = getPlatformIcon(pr.repo);
+        html += '<div class="chat-sidebar__pr-group">';
+        html += '<div class="chat-sidebar__pr-label">';
+        html += '<span style="color:' + platform.color + ';"><i data-lucide="' + platform.icon + '"></i></span> ';
+        html += escapeHtml(formatRepoName(pr.repo)) + ' #' + prNum;
+        html += '</div>';
+
+        if (prSessions.length === 0) {
+          html += '<div class="chat-sidebar__empty" style="padding:0.3rem 0.85rem;font-size:0.6875rem;">No sessions</div>';
+        } else {
+          for (var s = 0; s < prSessions.length; s++) {
+            var sess = prSessions[s];
+            var isActive = sess.id === chatActiveSessionId;
+            var dotClass = 'chat-sidebar__session-dot chat-sidebar__session-dot--' + (sess.meta.status || 'complete');
+            var timeStr = sess.meta.startedAt ? timeAgo(sess.meta.startedAt) : '';
+            var sessLabel = sess.meta.label || 'Session';
+            // Strip "Custom: repo #num" prefix for cleaner display
+            sessLabel = sessLabel.replace(/^Custom:\s*/i, '').replace(/^(checks|comments|conflicts|all):\s*/i, '');
+            if (sessLabel.length > 35) sessLabel = sessLabel.slice(0, 35) + '...';
+            html += '<button class="chat-sidebar__session' + (isActive ? ' active' : '') + '" data-session-id="' + escapeAttr(sess.id) + '">';
+            html += '<span class="' + dotClass + '"></span>';
+            html += '<span class="chat-sidebar__session-label">' + escapeHtml(sessLabel) + '</span>';
+            html += '<span class="chat-sidebar__session-time">' + escapeHtml(timeStr) + '</span>';
+            html += '</button>';
+          }
+        }
+        html += '</div>';
+      }
+
+      if (!html) {
+        html = '<div class="chat-sidebar__empty">No agent sessions yet. Start a new chat to begin.</div>';
+      }
+
+      chatSidebarSessions.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Simple time-ago helper
+    function timeAgo(timestamp) {
+      var diff = Date.now() - timestamp;
+      if (diff < 60000) return 'now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+      return Math.floor(diff / 86400000) + 'd';
+    }
+
+    function closeChatPanel() {
+      chatPanelOpen = false;
+      chatPanel.classList.remove('open');
+      chatBackdrop.classList.remove('open');
+      chatAssistantEl = null;
+    }
+
+    function showChatQuickActions(prContext) {
+      chatActiveSessionId = null;
+      chatAssistantEl = null;
+      chatPanelInputArea.classList.add('visible');
+      chatPanelCancel.style.display = 'none';
+      chatPanelStatus.style.display = 'none';
+
+      var label = 'Agent Chat';
+      if (prContext && prContext.repo && prContext.number) {
+        label = formatRepoName(prContext.repo) + ' #' + prContext.number;
+      }
+      chatPanelTitle.innerHTML = escapeHtml(label);
+
+      var html = '<div class="chat-panel__actions">';
+      html += '<div class="chat-panel__actions-title">What would you like to do?</div>';
+      if (prContext && prContext.repo) {
+        html += '<button class="chat-panel__action-btn" data-chat-action="checks"><i data-lucide="shield-check"></i> Fix Failing Checks</button>';
+        html += '<button class="chat-panel__action-btn" data-chat-action="comments"><i data-lucide="message-square"></i> Handle PR Comments</button>';
+        html += '<button class="chat-panel__action-btn" data-chat-action="conflicts"><i data-lucide="git-merge"></i> Resolve Conflicts</button>';
+      }
+      html += '<button class="chat-panel__action-btn chat-panel__action-btn--custom" data-chat-action="custom"><i data-lucide="terminal"></i> Custom Prompt</button>';
+      html += '</div>';
+      chatPanelMessages.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function switchChatSession(sessionId) {
+      chatActiveSessionId = sessionId;
+      chatAssistantEl = null;
+      chatThinkingEl = null;
+      var meta = chatSessionMeta[sessionId];
+
+      // Update header — show session type/label as title, PR context in dropdown
+      var label = (meta && meta.label) ? meta.label : 'Chat';
+      chatPanelTitle.innerHTML = escapeHtml(label);
+      if (meta && meta.repo && meta.number) {
+        var sessionPath = meta.path || '';
+        // If no path stored, try to find it from cached initiatives
+        if (!sessionPath) {
+          sessionPath = lookupInitiativePath(meta.repo, meta.number) || '';
+        }
+        chatPanelPrContext = { repo: meta.repo, number: String(meta.number), path: sessionPath };
+      }
+      updateChatPanelStatusBadge(meta ? meta.status : 'running');
+
+      // Always show cancel when running, always show input area
+      if (meta && meta.status === 'running') {
+        chatPanelCancel.style.display = '';
+      } else {
+        chatPanelCancel.style.display = 'none';
+      }
+      chatPanelInputArea.classList.add('visible');
+
+      // Build the conversation chain (oldest first)
+      var chain = getSessionChain(sessionId);
+
+      // Render the full conversation
+      chatPanelMessages.innerHTML = '';
+
+      // Render previous turns as collapsed blocks
+      for (var c = 0; c < chain.length - 1; c++) {
+        renderCollapsedTurn(chain[c], c + 1);
+      }
+
+      // Divider before current turn if there's history
+      if (chain.length > 1) {
+        var divider = document.createElement('div');
+        divider.className = 'chat-history-divider';
+        divider.textContent = 'Current';
+        chatPanelMessages.appendChild(divider);
+      }
+
+      // Render current session messages
+      var msgs = chatSessionMessages[sessionId] || [];
+      for (var i = 0; i < msgs.length; i++) {
+        appendChatMessage(msgs[i], true);
+      }
+      scrollChatToBottom();
+      renderSidebar();
+
+      // Also fetch from server to catch up on any messages we missed
+      fetchSessionMessages(sessionId, msgs.length);
+    }
+
+    // Walk the _prevSessionId chain and return [oldest, ..., newest]
+    function getSessionChain(sessionId) {
+      var chain = [];
+      var sid = sessionId;
+      var visited = {};
+      while (sid && !visited[sid]) {
+        visited[sid] = true;
+        chain.unshift(sid); // prepend so oldest is first
+        var m = chatSessionMeta[sid];
+        sid = m ? m._prevSessionId : null;
+      }
+      return chain;
+    }
+
+    // Extract a clean prompt text from a session's messages (the 'user' type message)
+    function getSessionPromptText(sessionId) {
+      var msgs = chatSessionMessages[sessionId] || [];
+      for (var i = 0; i < msgs.length; i++) {
+        if (msgs[i].type === 'user') {
+          var raw = msgs[i].raw || {};
+          if (raw.message && raw.message.content) {
+            var arr = Array.isArray(raw.message.content) ? raw.message.content : [raw.message.content];
+            for (var j = 0; j < arr.length; j++) {
+              if (typeof arr[j] === 'string') return arr[j];
+              if (arr[j] && arr[j].text) return arr[j].text;
+            }
+          }
+        }
+      }
+      // Fallback to the session's stored prompt
+      var meta = chatSessionMeta[sessionId];
+      return (meta && meta._promptText) || '';
+    }
+
+    // Get the final assistant response text from a session
+    function getSessionResponseSummary(sessionId) {
+      var msgs = chatSessionMessages[sessionId] || [];
+      var lastAssistant = '';
+      for (var i = 0; i < msgs.length; i++) {
+        if (msgs[i].type === 'assistant') {
+          var raw = msgs[i].raw || {};
+          // Only take non-partial (final) messages
+          if (!raw.timestamp_ms && raw.message && raw.message.content) {
+            var arr = Array.isArray(raw.message.content) ? raw.message.content : [raw.message.content];
+            for (var j = 0; j < arr.length; j++) {
+              if (typeof arr[j] === 'string') lastAssistant = arr[j];
+              else if (arr[j] && arr[j].text) lastAssistant = arr[j].text;
+            }
+          }
+        }
+      }
+      if (lastAssistant.length > 80) return lastAssistant.slice(0, 80) + '...';
+      return lastAssistant;
+    }
+
+    // Render a collapsed conversation turn
+    function renderCollapsedTurn(sid, turnNumber) {
+      var promptText = getSessionPromptText(sid);
+      // Strip image attachment paths from display
+      var cleanPrompt = promptText.replace(/\n\n\[Attached images?:[\s\S]*?\]/g, '').trim();
+      var hasImages = /\[Attached images?:/.test(promptText);
+      var responseSummary = getSessionResponseSummary(sid);
+      var turnMeta = chatSessionMeta[sid];
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'chat-history-turn';
+      wrapper.setAttribute('data-session-id', sid);
+
+      var header = document.createElement('div');
+      header.className = 'chat-history-turn__header';
+      header.addEventListener('click', function() {
+        wrapper.classList.toggle('expanded');
+      });
+
+      var promptSpan = document.createElement('span');
+      promptSpan.className = 'chat-history-turn__prompt';
+      var displayPrompt = cleanPrompt.length > 60 ? cleanPrompt.slice(0, 60) + '...' : cleanPrompt;
+      promptSpan.innerHTML = escapeHtml(displayPrompt || 'Turn ' + turnNumber);
+      if (hasImages) {
+        promptSpan.innerHTML += ' <i data-lucide="image" style="width:12px;height:12px;display:inline;vertical-align:middle;color:var(--text-dim)"></i>';
+      }
+
+      var summary = document.createElement('span');
+      summary.className = 'chat-history-turn__summary';
+      summary.textContent = responseSummary ? responseSummary.slice(0, 40) + (responseSummary.length > 40 ? '...' : '') : (turnMeta && turnMeta.status) || '';
+
+      var chevron = document.createElement('span');
+      chevron.className = 'chat-history-turn__chevron';
+      chevron.innerHTML = '<i data-lucide="chevron-right"></i>';
+
+      header.appendChild(promptSpan);
+      header.appendChild(summary);
+      header.appendChild(chevron);
+      wrapper.appendChild(header);
+
+      // Body: render messages lazily on first expand
+      var body = document.createElement('div');
+      body.className = 'chat-history-turn__body';
+      body.setAttribute('data-rendered', 'false');
+      wrapper.appendChild(body);
+
+      // Lazy render on first expand
+      header.addEventListener('click', function() {
+        if (body.getAttribute('data-rendered') === 'false') {
+          body.setAttribute('data-rendered', 'true');
+          renderTurnBody(body, sid);
+        }
+      });
+
+      chatPanelMessages.appendChild(wrapper);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Render messages for a collapsed turn's body
+    function renderTurnBody(container, sid) {
+      var msgs = chatSessionMessages[sid] || [];
+      var tempAssistant = null;
+      var tempThinking = null;
+
+      for (var i = 0; i < msgs.length; i++) {
+        var msg = msgs[i];
+        var raw = msg.raw || {};
+        var el = null;
+
+        if (msg.type === 'user' || msg.type === 'thinking') {
+          // Skip user (shown in header) and thinking deltas
+          if (msg.type === 'thinking' && msg.subtype === 'delta') continue;
+          if (msg.type === 'user') continue;
+          // Final thinking — show collapsed
+          var thinkText = raw.text || '';
+          if (!thinkText) continue;
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--thinking';
+          el.innerHTML = '<div class="thinking-label" onclick="this.parentNode.classList.toggle(\'expanded\')">' +
+            '<i data-lucide="brain"></i> <span>Thought</span>' +
+            '<span class="thinking-chevron"><i data-lucide="chevron-right"></i></span></div>' +
+            '<div class="thinking-body">' + escapeHtml(thinkText.length > 1000 ? thinkText.slice(0, 1000) + '...' : thinkText) + '</div>';
+
+        } else if (msg.type === 'assistant') {
+          var content = '';
+          if (raw.message && raw.message.content) {
+            var arr = Array.isArray(raw.message.content) ? raw.message.content : [raw.message.content];
+            for (var j = 0; j < arr.length; j++) {
+              if (typeof arr[j] === 'string') content += arr[j];
+              else if (arr[j] && arr[j].text) content += arr[j].text;
+            }
+          }
+          if (!content) continue;
+          // Only show final messages
+          if (raw.timestamp_ms) continue;
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--assistant';
+          el.innerHTML = formatChatText(content);
+
+        } else if (msg.type === 'tool_call') {
+          var commitInfo = detectGitCommit(raw);
+          if (commitInfo && msg.subtype === 'completed') {
+            el = document.createElement('div');
+            el.className = 'chat-msg chat-msg--commit';
+            el.innerHTML = '<i data-lucide="git-commit"></i><div class="chat-msg--commit-body">' +
+              '<div class="chat-msg--commit-msg">' + escapeHtml(commitInfo.message) + '</div>' +
+              '<div class="chat-msg--commit-meta">' +
+              (commitInfo.sha ? '<span class="chat-msg--commit-sha">' + commitInfo.sha + '</span> ' : '') +
+              (commitInfo.files ? commitInfo.files + ' files changed' : '') +
+              '</div></div>';
+          } else {
+            el = document.createElement('div');
+            el.className = 'chat-msg chat-msg--tool';
+            var toolName = getToolName(raw);
+            var isCompleted = msg.subtype === 'completed';
+            var statusIcon = isCompleted ? 'check-circle' : 'play';
+            el.innerHTML = '<div class="chat-msg--tool-header" onclick="this.classList.toggle(\'expanded\');this.nextElementSibling.classList.toggle(\'expanded\')">' +
+              '<i data-lucide="' + statusIcon + '"></i> ' + escapeHtml(toolName) +
+              '<span class="tool-chevron"><i data-lucide="chevron-right"></i></span></div>' +
+              '<div class="chat-msg--tool-body">' + escapeHtml(getToolDetail(raw)) + '</div>';
+          }
+
+        } else if (msg.type === 'result') {
+          var dur = raw.duration_ms ? (raw.duration_ms / 1000).toFixed(1) + 's' : '';
+          var isSuccess = raw.subtype !== 'error';
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--result ' + (isSuccess ? 'success' : 'failed');
+          el.innerHTML = '<i data-lucide="' + (isSuccess ? 'check-circle' : 'alert-circle') + '"></i> ' +
+            (isSuccess ? 'Completed' : 'Failed') + (dur ? ' in ' + dur : '');
+        }
+
+        if (el) container.appendChild(el);
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Fetch session messages from server (reusable)
+    function fetchSessionMessages(sessionId, localCount) {
+      fetch('/api/agent-session/' + encodeURIComponent(sessionId))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data || !data.messages) return;
+          // Update meta from server
+          if (data.status) {
+            if (!chatSessionMeta[sessionId]) chatSessionMeta[sessionId] = {};
+            chatSessionMeta[sessionId].status = data.status;
+            if (data.cursorChatId) chatSessionMeta[sessionId].cursorChatId = data.cursorChatId;
+            if (chatActiveSessionId === sessionId) {
+              updateChatPanelStatusBadge(data.status);
+              if (data.status !== 'running') {
+                chatPanelCancel.style.display = 'none';
+              }
+            }
+          }
+          // Replace local buffer with server's full buffer if server has more
+          var serverMsgs = data.messages || [];
+          if (serverMsgs.length > (localCount || 0)) {
+            chatSessionMessages[sessionId] = serverMsgs;
+            // Re-render current session messages only (not collapsed history)
+            if (chatActiveSessionId === sessionId) {
+              // Remove everything after the last .chat-history-divider (or from start if none)
+              var divider = chatPanelMessages.querySelector('.chat-history-divider');
+              var startNode = divider ? divider.nextSibling : chatPanelMessages.firstChild;
+              // Remove old current-session messages
+              while (startNode && startNode !== chatPanelMessages.lastChild) {
+                var next = startNode.nextSibling;
+                if (startNode !== divider) chatPanelMessages.removeChild(startNode);
+                startNode = next;
+              }
+              if (startNode && startNode !== divider) chatPanelMessages.removeChild(startNode);
+
+              // Re-render
+              chatAssistantEl = null;
+              chatThinkingEl = null;
+              for (var j = 0; j < serverMsgs.length; j++) {
+                appendChatMessage(serverMsgs[j], true);
+              }
+              scrollChatToBottom();
+            }
+          }
+        })
+        .catch(function(err) {
+          console.error('Failed to fetch session:', err);
+        });
+    }
+
+    function updateChatPanelStatusBadge(status) {
+      if (!status || status === 'pending') {
+        chatPanelStatus.style.display = 'none';
+        return;
+      }
+      chatPanelStatus.style.display = '';
+      chatPanelStatus.className = 'chat-panel__status chat-panel__status--' + status;
+      var icon = 'loader-2';
+      var text = status;
+      if (status === 'running') { icon = 'loader-2'; text = 'Running'; }
+      else if (status === 'complete') { icon = 'check-circle'; text = 'Complete'; }
+      else if (status === 'failed') { icon = 'alert-circle'; text = 'Failed'; }
+      else if (status === 'cancelled') { icon = 'ban'; text = 'Cancelled'; }
+      chatPanelStatus.innerHTML = '<i data-lucide="' + icon + '"></i> ' + escapeHtml(text);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // (Old PR switcher dropdown removed — replaced by renderSidebar above)
+
+    function appendChatMessage(msg, skipScroll) {
+      var el = null;
+      var raw = msg.raw || {};
+
+      if (msg.type === 'user') {
+        // User prompt message from the CLI stream — skip rendering since we show it as prompt
+        return;
+
+      } else if (msg.type === 'thinking') {
+        // Thinking messages — show a subtle collapsible indicator
+        var thinkText = raw.text || '';
+        var isPartial = msg.subtype === 'delta';
+
+        if (skipScroll) {
+          // Re-rendering from buffer: skip deltas, only show final thinking
+          if (isPartial) return;
+          if (!thinkText) return;
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--thinking';
+          el.setAttribute('data-think-text', thinkText);
+          el.innerHTML = '<div class="thinking-label" onclick="this.parentNode.classList.toggle(\'expanded\')">' +
+            '<i data-lucide="brain"></i> <span>Thought for a moment</span>' +
+            '<span class="thinking-chevron"><i data-lucide="chevron-right"></i></span>' +
+            '</div>' +
+            '<div class="thinking-body">' + escapeHtml(thinkText.length > 2000 ? thinkText.slice(0, 2000) + '...' : thinkText) + '</div>';
+          chatThinkingEl = null;
+        } else {
+          // Live streaming
+          if (isPartial) {
+            if (chatThinkingEl && chatThinkingEl.parentNode) {
+              // Accumulate thinking text silently
+              var cur = chatThinkingEl.getAttribute('data-think-text') || '';
+              cur += thinkText;
+              chatThinkingEl.setAttribute('data-think-text', cur);
+            } else {
+              // Create thinking indicator
+              el = document.createElement('div');
+              el.className = 'chat-msg chat-msg--thinking active';
+              el.setAttribute('data-think-text', thinkText);
+              el.innerHTML = '<div class="thinking-label">' +
+                '<i data-lucide="brain"></i> <span>Thinking<span class="thinking-dots"></span></span>' +
+                '</div>';
+              chatThinkingEl = el;
+            }
+          } else {
+            // Final thinking message — finalize the indicator
+            if (chatThinkingEl && chatThinkingEl.parentNode) {
+              var fullThink = chatThinkingEl.getAttribute('data-think-text') || thinkText || '';
+              chatThinkingEl.classList.remove('active');
+              chatThinkingEl.setAttribute('data-think-text', fullThink);
+              chatThinkingEl.innerHTML = '<div class="thinking-label" onclick="this.parentNode.classList.toggle(\'expanded\')">' +
+                '<i data-lucide="brain"></i> <span>Thought for a moment</span>' +
+                '<span class="thinking-chevron"><i data-lucide="chevron-right"></i></span>' +
+                '</div>' +
+                '<div class="thinking-body">' + escapeHtml(fullThink.length > 2000 ? fullThink.slice(0, 2000) + '...' : fullThink) + '</div>';
+              if (typeof lucide !== 'undefined') lucide.createIcons();
+              chatThinkingEl = null;
+            }
+          }
+        }
+        // Don't scroll for every thinking delta
+        if (isPartial) return;
+
+      } else if (msg.type === 'system') {
+        // Close thinking if active
+        closeThinking();
+        el = document.createElement('div');
+        el.className = 'chat-msg chat-msg--system';
+        var sysText = '';
+        if (msg.subtype === 'init' && raw.model) {
+          sysText = 'Model: ' + (raw.model || 'unknown');
+        } else {
+          sysText = raw.text || raw.message || JSON.stringify(raw);
+        }
+        el.innerHTML = '<i data-lucide="info"></i> ' + escapeHtml(sysText);
+
+      } else if (msg.type === 'assistant') {
+        // Close thinking indicator when assistant starts responding
+        closeThinking();
+
+        // Extract text content from the message
+        var content = '';
+        if (raw.message && raw.message.content) {
+          var contentArr = Array.isArray(raw.message.content) ? raw.message.content : [raw.message.content];
+          for (var i = 0; i < contentArr.length; i++) {
+            if (typeof contentArr[i] === 'string') content += contentArr[i];
+            else if (contentArr[i] && contentArr[i].text) content += contentArr[i].text;
+          }
+        }
+        if (!content && raw.text) content = raw.text;
+        if (!content) return;
+
+        // stream-json sends partial deltas AND a final complete message.
+        // The final message (no timestamp_ms) contains the full accumulated text.
+        var isPartialAssistant = !!raw.timestamp_ms;
+
+        if (skipScroll) {
+          // Re-rendering from buffer: only show final (non-partial) messages
+          if (isPartialAssistant) return;
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--assistant';
+          el.setAttribute('data-full-text', content);
+          el.innerHTML = formatChatText(content);
+          chatAssistantEl = el;
+        } else {
+          // Live streaming: accumulate partial deltas
+          if (chatAssistantEl && chatAssistantEl.parentNode) {
+            if (isPartialAssistant) {
+              chatAssistantEl.classList.add('typing-cursor');
+              var currentText = chatAssistantEl.getAttribute('data-full-text') || '';
+              currentText += content;
+              chatAssistantEl.setAttribute('data-full-text', currentText);
+              chatAssistantEl.innerHTML = formatChatText(currentText);
+            } else {
+              chatAssistantEl.classList.remove('typing-cursor');
+              chatAssistantEl.setAttribute('data-full-text', content);
+              chatAssistantEl.innerHTML = formatChatText(content);
+            }
+          } else {
+            el = document.createElement('div');
+            el.className = 'chat-msg chat-msg--assistant' + (isPartialAssistant ? ' typing-cursor' : '');
+            el.setAttribute('data-full-text', content);
+            el.innerHTML = formatChatText(content);
+            chatAssistantEl = el;
+          }
+        }
+
+      } else if (msg.type === 'tool_call') {
+        // Close thinking and streaming assistant
+        closeThinking();
+        if (chatAssistantEl) {
+          chatAssistantEl.classList.remove('typing-cursor');
+          chatAssistantEl = null;
+        }
+        var commitInfo2 = detectGitCommit(raw);
+        if (commitInfo2 && msg.subtype === 'completed') {
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--commit';
+          el.innerHTML = '<i data-lucide="git-commit"></i><div class="chat-msg--commit-body">' +
+            '<div class="chat-msg--commit-msg">' + escapeHtml(commitInfo2.message) + '</div>' +
+            '<div class="chat-msg--commit-meta">' +
+            (commitInfo2.sha ? '<span class="chat-msg--commit-sha">' + commitInfo2.sha + '</span> ' : '') +
+            (commitInfo2.files ? commitInfo2.files + ' files changed' : '') +
+            '</div></div>';
+        } else {
+          el = document.createElement('div');
+          el.className = 'chat-msg chat-msg--tool';
+          var toolName = getToolName(raw);
+          var toolDetail = getToolDetail(raw);
+          var isCompleted = msg.subtype === 'completed';
+          var statusIcon = isCompleted ? 'check-circle' : 'play';
+          el.innerHTML = '<div class="chat-msg--tool-header" onclick="this.classList.toggle(\'expanded\');this.nextElementSibling.classList.toggle(\'expanded\')">' +
+            '<i data-lucide="' + statusIcon + '"></i> ' + escapeHtml(toolName) +
+            '<span class="tool-chevron"><i data-lucide="chevron-right"></i></span>' +
+            '</div>' +
+            '<div class="chat-msg--tool-body">' + escapeHtml(toolDetail) + '</div>';
+        }
+
+      } else if (msg.type === 'result') {
+        // Close thinking and streaming assistant
+        closeThinking();
+        if (chatAssistantEl) {
+          chatAssistantEl.classList.remove('typing-cursor');
+          chatAssistantEl = null;
+        }
+        el = document.createElement('div');
+        var dur = raw.duration_ms ? (raw.duration_ms / 1000).toFixed(1) + 's' : '';
+        var isSuccess = raw.subtype !== 'error';
+        el.className = 'chat-msg chat-msg--result ' + (isSuccess ? 'success' : 'failed');
+        el.innerHTML = '<i data-lucide="' + (isSuccess ? 'check-circle' : 'alert-circle') + '"></i> ' +
+          (isSuccess ? 'Completed' : 'Failed') + (dur ? ' in ' + dur : '');
+
+      } else if (msg.type === 'stderr') {
+        el = document.createElement('div');
+        el.className = 'chat-msg chat-msg--stderr';
+        el.textContent = raw.text || '';
+
+      } else if (msg.type === 'raw') {
+        el = document.createElement('div');
+        el.className = 'chat-msg chat-msg--raw';
+        el.textContent = raw.text || JSON.stringify(raw);
+
+      } else {
+        // Unknown type — silently ignore rather than dumping JSON
+        // (catches future new types gracefully)
+        return;
+      }
+
+      if (el) {
+        chatPanelMessages.appendChild(el);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+      if (!skipScroll && chatAutoScroll) {
+        scrollChatToBottom();
+      }
+    }
+
+    // Collapse current visible messages into a history turn
+    function collapseCurrentMessages(sessionId) {
+      // Find the "Current" divider — everything after it is current session content
+      var dividers = chatPanelMessages.querySelectorAll('.chat-history-divider');
+      var lastDivider = dividers.length > 0 ? dividers[dividers.length - 1] : null;
+
+      // Collect nodes to remove (current session messages)
+      var nodesToRemove = [];
+      var startRemoving = !lastDivider; // if no divider, remove from first non-history-turn
+      var children = chatPanelMessages.children;
+      for (var i = 0; i < children.length; i++) {
+        if (children[i] === lastDivider) {
+          startRemoving = true;
+          nodesToRemove.push(children[i]); // remove the divider too
+          continue;
+        }
+        if (startRemoving && !children[i].classList.contains('chat-history-turn')) {
+          nodesToRemove.push(children[i]);
+        }
+      }
+
+      // Remove them
+      for (var j = 0; j < nodesToRemove.length; j++) {
+        chatPanelMessages.removeChild(nodesToRemove[j]);
+      }
+
+      // Reset streaming state
+      chatAssistantEl = null;
+      chatThinkingEl = null;
+
+      // Add a collapsed turn for the session that just finished
+      var chain = getSessionChain(sessionId);
+      var turnNum = chain.length;
+      renderCollapsedTurn(sessionId, turnNum);
+    }
+
+    function closeThinking() {
+      if (chatThinkingEl && chatThinkingEl.parentNode) {
+        var fullThink = chatThinkingEl.getAttribute('data-think-text') || '';
+        chatThinkingEl.classList.remove('active');
+        if (fullThink) {
+          chatThinkingEl.innerHTML = '<div class="thinking-label" onclick="this.parentNode.classList.toggle(\'expanded\')">' +
+            '<i data-lucide="brain"></i> <span>Thought for a moment</span>' +
+            '<span class="thinking-chevron"><i data-lucide="chevron-right"></i></span>' +
+            '</div>' +
+            '<div class="thinking-body">' + escapeHtml(fullThink.length > 2000 ? fullThink.slice(0, 2000) + '...' : fullThink) + '</div>';
+        } else {
+          chatThinkingEl.innerHTML = '<div class="thinking-label"><i data-lucide="brain"></i> <span>Thought for a moment</span></div>';
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        chatThinkingEl = null;
+      }
+    }
+
+    function scrollChatToBottom() {
+      chatPanelMessages.scrollTop = chatPanelMessages.scrollHeight;
+    }
+
+    // Track scroll position to disable auto-scroll when user scrolls up
+    if (chatPanelMessages) {
+      chatPanelMessages.addEventListener('scroll', function() {
+        var threshold = 60;
+        var atBottom = chatPanelMessages.scrollHeight - chatPanelMessages.scrollTop - chatPanelMessages.clientHeight < threshold;
+        chatAutoScroll = atBottom;
+      });
+    }
+
+    function formatChatText(text) {
+      // Simple markdown-like formatting: code blocks, inline code, bold
+      var escaped = escapeHtml(text);
+      // Code blocks: ```...```
+      escaped = escaped.replace(/```([^`]*?)```/g, '<pre><code>$1</code></pre>');
+      // Inline code: `...`
+      escaped = escaped.replace(/`([^`]+?)`/g, '<code>$1</code>');
+      // Bold: **...**
+      escaped = escaped.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+      return escaped;
+    }
+
+    function getToolName(raw) {
+      var tc = raw.tool_call || raw;
+      if (tc.bashToolCall) return 'Bash';
+      if (tc.readToolCall) return 'Read: ' + (tc.readToolCall.args && tc.readToolCall.args.path ? shortenPath(tc.readToolCall.args.path) : '');
+      if (tc.writeToolCall) return 'Write: ' + (tc.writeToolCall.args && tc.writeToolCall.args.path ? shortenPath(tc.writeToolCall.args.path) : '');
+      if (tc.editToolCall) return 'Edit: ' + (tc.editToolCall.args && tc.editToolCall.args.path ? shortenPath(tc.editToolCall.args.path) : '');
+      if (tc.globToolCall) return 'Glob';
+      if (tc.grepToolCall) return 'Grep';
+      if (tc.name) return tc.name;
+      if (tc.type) return tc.type;
+      return 'Tool';
+    }
+
+    function getToolDetail(raw) {
+      var tc = raw.tool_call || raw;
+      // Show command or args
+      if (tc.bashToolCall) {
+        var cmd = tc.bashToolCall.args && tc.bashToolCall.args.command ? tc.bashToolCall.args.command : '';
+        var result = tc.bashToolCall.result ? JSON.stringify(tc.bashToolCall.result, null, 2) : '';
+        return cmd + (result ? '\n---\n' + result : '');
+      }
+      if (tc.readToolCall) {
+        if (tc.readToolCall.result && tc.readToolCall.result.success) {
+          return 'Read ' + (tc.readToolCall.result.success.totalLines || '?') + ' lines';
+        }
+        return tc.readToolCall.args ? JSON.stringify(tc.readToolCall.args) : '';
+      }
+      if (tc.writeToolCall) {
+        if (tc.writeToolCall.result && tc.writeToolCall.result.success) {
+          return 'Created ' + (tc.writeToolCall.result.success.linesCreated || '?') + ' lines (' + (tc.writeToolCall.result.success.fileSize || '?') + ' bytes)';
+        }
+        return tc.writeToolCall.args ? JSON.stringify(tc.writeToolCall.args) : '';
+      }
+      if (tc.editToolCall) {
+        return tc.editToolCall.args ? JSON.stringify(tc.editToolCall.args, null, 2).slice(0, 500) : '';
+      }
+      return JSON.stringify(tc, null, 2).slice(0, 500);
+    }
+
+    function shortenPath(p) {
+      if (!p) return '';
+      var parts = p.split('/');
+      if (parts.length <= 3) return p;
+      return '.../' + parts.slice(-2).join('/');
+    }
+
+    // Detect if a tool call is a git commit and extract info
+    function detectGitCommit(raw) {
+      var tc = raw.tool_call || raw;
+      if (!tc.bashToolCall) return null;
+      var cmd = (tc.bashToolCall.args && tc.bashToolCall.args.command) || '';
+      if (!/git\s+commit/.test(cmd)) return null;
+      // Parse commit message from -m flag
+      var msgMatch = cmd.match(/-m\s+["']([^"']+)["']/);
+      var commitMsg = msgMatch ? msgMatch[1] : cmd.replace(/.*git\s+commit\s*/, '').trim();
+      // Check for result with commit SHA
+      var sha = '';
+      var resultStr = tc.bashToolCall.result ? JSON.stringify(tc.bashToolCall.result) : '';
+      var shaMatch = resultStr.match(/\b([0-9a-f]{7,40})\b/);
+      if (shaMatch) sha = shaMatch[1].slice(0, 7);
+      // Check for file count in output
+      var filesMatch = resultStr.match(/(\d+)\s+files?\s+changed/);
+      var fileCount = filesMatch ? filesMatch[1] : '';
+      return { message: commitMsg, sha: sha, files: fileCount };
+    }
+
+    function startChatSession(prompt, label, type, resumeSessionId, imageDataUrls) {
+      if (!chatPanelPrContext || !chatPanelPrContext.path) {
+        showToast('No project path available');
+        return;
+      }
+      var body = {
+        path: chatPanelPrContext.path,
+        prompt: prompt,
+        label: label || 'Agent session',
+      };
+      if (chatPanelPrContext.repo) body.repo = chatPanelPrContext.repo;
+      if (chatPanelPrContext.number) body.number = chatPanelPrContext.number;
+      if (type) body.type = type;
+      if (resumeSessionId) body.resumeSessionId = resumeSessionId;
+
+      // Show the follow-up prompt immediately in the current panel
+      if (resumeSessionId && chatActiveSessionId) {
+        // Collapse all current content into history, then show new prompt
+        collapseCurrentMessages(resumeSessionId);
+        var divider = document.createElement('div');
+        divider.className = 'chat-history-divider';
+        divider.textContent = 'Current';
+        chatPanelMessages.appendChild(divider);
+        var promptEl = createPromptElement(prompt, imageDataUrls);
+        chatPanelMessages.appendChild(promptEl);
+        scrollChatToBottom();
+      }
+
+      fetch('/api/agent-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.sessionId) {
+          var sessionId = data.sessionId;
+          // DON'T reset chatSessionMessages — SSE events may have already populated it
+          if (!chatSessionMessages[sessionId]) chatSessionMessages[sessionId] = [];
+          // Only set meta if SSE hasn't already set it
+          if (!chatSessionMeta[sessionId]) {
+            chatSessionMeta[sessionId] = {
+              repo: chatPanelPrContext.repo,
+              number: chatPanelPrContext.number ? parseInt(chatPanelPrContext.number, 10) : undefined,
+              path: chatPanelPrContext.path || '',
+              status: 'running',
+              label: label || 'Agent session',
+              startedAt: Date.now()
+            };
+          } else if (!chatSessionMeta[sessionId].path && chatPanelPrContext.path) {
+            chatSessionMeta[sessionId].path = chatPanelPrContext.path;
+          }
+
+          if (resumeSessionId) {
+            // For resumed sessions, link the new session to the old one's chat panel
+            // Keep viewing the same conversation — new messages stream into the active panel
+            chatActiveSessionId = sessionId;
+            chatSessionMeta[sessionId].label = chatSessionMeta[resumeSessionId] ? chatSessionMeta[resumeSessionId].label : label;
+            // Store the chain so we know this is a continuation
+            if (!chatSessionMeta[sessionId]._prevSessionId) {
+              chatSessionMeta[sessionId]._prevSessionId = resumeSessionId;
+            }
+            updateChatPanelStatusBadge('running');
+            chatPanelCancel.style.display = '';
+            renderSidebar();
+          } else {
+            switchChatSession(sessionId);
+            // Prepend the prompt as the first visual element (before streamed messages)
+            var promptEl2 = createPromptElement(prompt, imageDataUrls);
+            chatPanelMessages.insertBefore(promptEl2, chatPanelMessages.firstChild);
+          }
+
+          showToast(data.resumed ? 'Resuming conversation' : 'Agent started');
+          // Update chat badge on PR row
+          updateChatBadge(chatPanelPrContext.repo, chatPanelPrContext.number, 'running');
+        } else {
+          showToast('Failed to start agent: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(function(err) {
+        showToast('Error starting agent');
+        console.error('Start session error:', err);
+      });
+    }
+
+    function updateChatBadge(repo, number, status) {
+      if (!repo || !number) return;
+      var btn = document.querySelector('.chat-btn[data-repo="' + repo + '"][data-number="' + number + '"]');
+      if (!btn) return;
+      var badge = btn.querySelector('.chat-badge');
+      if (status && status !== 'cleared') {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'chat-badge';
+          btn.appendChild(badge);
+        }
+        badge.className = 'chat-badge chat-badge--' + status;
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    // Chat panel event handlers
+    chatPanelClose.addEventListener('click', closeChatPanel);
+    chatBackdrop.addEventListener('click', closeChatPanel);
+
+    chatPanelCancel.addEventListener('click', function() {
+      if (!chatActiveSessionId) return;
+      fetch('/api/agent-session/' + encodeURIComponent(chatActiveSessionId), { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+          showToast('Agent cancelled');
+        })
+        .catch(function() {
+          showToast('Failed to cancel agent');
+        });
+    });
+
+    // Sidebar session click
+    chatSidebarSessions.addEventListener('click', function(e) {
+      var sessionBtn = e.target.closest('.chat-sidebar__session');
+      if (!sessionBtn) return;
+      var sid = sessionBtn.getAttribute('data-session-id');
+      if (!sid || !chatSessionMeta[sid]) return;
+      var meta = chatSessionMeta[sid];
+      if (meta.repo && meta.number) {
+        chatPanelPrContext = { repo: meta.repo, number: String(meta.number), path: meta.path || lookupInitiativePath(meta.repo, meta.number) };
+      }
+      switchChatSession(sid);
+      renderSidebar();
+    });
+
+    // Sidebar "New" button
+    chatSidebarNewBtn.addEventListener('click', function() {
+      // Find first PR for current initiative and show quick actions
+      var firstPr = findFirstPrForInitiative(chatModalInitiative);
+      if (firstPr) {
+        chatPanelPrContext = firstPr;
+        showChatQuickActions(firstPr);
+      } else {
+        showChatQuickActions(null);
+      }
+    });
+
+    // Quick-action buttons
+    chatPanelMessages.addEventListener('click', function(e) {
+      var actionBtn = e.target.closest('[data-chat-action]');
+      if (!actionBtn) return;
+      var action = actionBtn.getAttribute('data-chat-action');
+      if (!chatPanelPrContext) return;
+      var repo = chatPanelPrContext.repo;
+      var num = chatPanelPrContext.number;
+      var path = chatPanelPrContext.path;
+      var branch = chatPanelPrContext.branch;
+
+      if (action === 'custom') {
+        chatPanelInputArea.classList.add('visible');
+        chatPanelInput.focus();
+        return;
+      }
+
+      if (action === 'checks') {
+        // Fetch check failures and start session
+        fetch('/api/check-failures?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var failures = data.failures || [];
+            var failureText = '';
+            if (failures.length > 0) {
+              failureText = '\n\nFailing checks:\n';
+              for (var i = 0; i < failures.length; i++) {
+                var f = failures[i];
+                failureText += '\n' + (i + 1) + '. ' + f.name + ' (' + f.conclusion + ')';
+                if (f.errors && f.errors.length > 0) {
+                  failureText += '\n   Errors from logs:';
+                  for (var j = 0; j < f.errors.length; j++) {
+                    failureText += '\n   - ' + f.errors[j];
+                  }
+                } else if (f.annotations && f.annotations.length > 0) {
+                  failureText += '\n   Errors:';
+                  for (var j = 0; j < f.annotations.length; j++) {
+                    var ann = f.annotations[j];
+                    failureText += '\n   - ' + ann.path + (ann.line ? ':' + ann.line : '') + ': ' + ann.message;
+                  }
+                }
+              }
+            }
+            var prompt = buildCopyText(repo, num, 'checks', {}) + failureText;
+            startChatSession(prompt, 'Fix checks: ' + formatRepoName(repo) + ' #' + num, 'checks');
+          })
+          .catch(function() {
+            var prompt = buildCopyText(repo, num, 'checks', {});
+            startChatSession(prompt, 'Fix checks: ' + formatRepoName(repo) + ' #' + num, 'checks');
+          });
+      } else if (action === 'comments') {
+        fetch('/api/pr-comments?repo=' + encodeURIComponent(repo) + '&number=' + encodeURIComponent(num))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var comments = data.comments || [];
+            var commentText = '';
+            if (comments.length > 0) {
+              commentText = '\n\nUnresolved comments:\n';
+              for (var i = 0; i < comments.length; i++) {
+                var c = comments[i];
+                commentText += '\n' + (i + 1) + '. ' + (c.path ? c.path + (c.line ? ':' + c.line : '') + ' - ' : '') + '@' + c.author + ':\n   ' + (c.body || '').split('\n').join('\n   ') + '\n';
+              }
+            }
+            var prompt = buildCopyText(repo, num, 'comments', { unresolved: comments.length }) + commentText;
+            startChatSession(prompt, 'Comments: ' + formatRepoName(repo) + ' #' + num, 'comments');
+          })
+          .catch(function() {
+            var prompt = buildCopyText(repo, num, 'comments', {});
+            startChatSession(prompt, 'Comments: ' + formatRepoName(repo) + ' #' + num, 'comments');
+          });
+      } else if (action === 'conflicts') {
+        var prompt = buildRebaseCommand(repo, num, branch);
+        startChatSession(prompt, 'Conflicts: ' + formatRepoName(repo) + ' #' + num, 'conflicts');
+      }
+    });
+
+    // Custom prompt send — resumes current conversation if one exists
+    chatPanelSend.addEventListener('click', function() {
+      var prompt = chatPanelInput.value.trim();
+      var imagePaths = getAttachedImagePaths();
+      var imageDataUrls = getAttachedImageDataUrls();
+
+      // Need either text or images
+      if (!prompt && imagePaths.length === 0) return;
+
+      // Check if any images are still uploading
+      var stillUploading = chatPendingImages.some(function(e) { return e.uploading; });
+      if (stillUploading) {
+        showToast('Wait for images to finish uploading');
+        return;
+      }
+
+      // Append image references to the prompt
+      if (imagePaths.length > 0) {
+        var imageRef = '\n\n[Attached image' + (imagePaths.length > 1 ? 's' : '') + ':\n';
+        for (var i = 0; i < imagePaths.length; i++) {
+          imageRef += '  ' + imagePaths[i] + '\n';
+        }
+        imageRef += 'Read ' + (imagePaths.length > 1 ? 'these images' : 'this image') + ' to see what I\'m referring to.]';
+        prompt = (prompt || 'See attached image' + (imagePaths.length > 1 ? 's' : '')) + imageRef;
+      }
+
+      chatPanelInput.value = '';
+      chatPanelInput.style.height = 'auto';
+      clearAttachments();
+
+      // Find a session with a cursorChatId to resume — walk the chain
+      var resumeId = findResumableSession();
+
+      var label = 'Custom: ';
+      if (chatPanelPrContext && chatPanelPrContext.repo) {
+        label += formatRepoName(chatPanelPrContext.repo) + ' #' + (chatPanelPrContext.number || '');
+      } else {
+        label += prompt.replace(/\n\n\[Attached images?:[\s\S]*?\]/g, '').trim().slice(0, 40);
+      }
+
+      if (resumeId) {
+        startChatSession(prompt, label, 'all', resumeId, imageDataUrls);
+      } else {
+        startChatSession(prompt, label, 'all', null, imageDataUrls);
+      }
+    });
+
+    // Walk the session chain to find one with a cursorChatId for --resume
+    function findResumableSession() {
+      if (!chatActiveSessionId) return null;
+      // Check current session
+      var sid = chatActiveSessionId;
+      var visited = {};
+      while (sid && !visited[sid]) {
+        visited[sid] = true;
+        var meta = chatSessionMeta[sid];
+        if (!meta) break;
+        // Can only resume completed/failed sessions (not currently running)
+        if (meta.status === 'running') return null;
+        if (meta.cursorChatId) return sid;
+        // Walk back to previous session in the chain
+        sid = meta._prevSessionId;
+      }
+      return null;
+    }
+
+    chatPanelInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatPanelSend.click();
+      }
+    });
+
+    // Auto-resize textarea
+    chatPanelInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // --- Image attachment handling ---
+
+    // Click attach button → open file picker
+    chatPanelAttach.addEventListener('click', function() {
+      chatPanelFileInput.click();
+    });
+
+    // File picker change
+    chatPanelFileInput.addEventListener('change', function() {
+      var files = chatPanelFileInput.files;
+      if (files && files.length > 0) {
+        for (var i = 0; i < files.length; i++) {
+          addImageFile(files[i]);
+        }
+        chatPanelFileInput.value = '';
+      }
+    });
+
+    // Paste image from clipboard
+    chatPanelInput.addEventListener('paste', function(e) {
+      var items = (e.clipboardData || e.originalEvent && e.originalEvent.clipboardData || {}).items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          var file = items[i].getAsFile();
+          if (file) addImageFile(file);
+        }
+      }
+    });
+
+    // Drag and drop on textarea
+    chatPanelInput.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      chatPanelInput.classList.add('drag-over');
+    });
+    chatPanelInput.addEventListener('dragleave', function() {
+      chatPanelInput.classList.remove('drag-over');
+    });
+    chatPanelInput.addEventListener('drop', function(e) {
+      e.preventDefault();
+      chatPanelInput.classList.remove('drag-over');
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files) {
+        for (var i = 0; i < files.length; i++) {
+          if (files[i].type.indexOf('image') !== -1) {
+            addImageFile(files[i]);
+          }
+        }
+      }
+    });
+
+    function addImageFile(file) {
+      if (!file || file.type.indexOf('image') === -1) return;
+      // Max 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('Image too large (max 10MB)');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var dataUrl = ev.target.result;
+        var entry = {
+          dataUrl: dataUrl,
+          serverPath: null,
+          filename: file.name || ('paste-' + Date.now() + '.png'),
+          uploading: true
+        };
+        chatPendingImages.push(entry);
+        renderAttachments();
+        uploadImage(entry);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function uploadImage(entry) {
+      var projectPath = (chatPanelPrContext && chatPanelPrContext.path) || '';
+      fetch('/api/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: entry.dataUrl,
+          filename: entry.filename,
+          projectPath: projectPath
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success && data.path) {
+          entry.serverPath = data.path;
+          entry.uploading = false;
+          renderAttachments();
+        } else {
+          showToast('Upload failed: ' + (data.error || 'unknown'));
+          removeAttachment(entry);
+        }
+      })
+      .catch(function(err) {
+        console.error('Upload error:', err);
+        showToast('Image upload failed');
+        removeAttachment(entry);
+      });
+    }
+
+    function removeAttachment(entry) {
+      var idx = chatPendingImages.indexOf(entry);
+      if (idx !== -1) chatPendingImages.splice(idx, 1);
+      renderAttachments();
+    }
+
+    function renderAttachments() {
+      chatPanelAttachments.innerHTML = '';
+      for (var i = 0; i < chatPendingImages.length; i++) {
+        var entry = chatPendingImages[i];
+        var div = document.createElement('div');
+        div.className = 'chat-attachment' + (entry.uploading ? ' chat-attachment--uploading' : '');
+        var img = document.createElement('img');
+        img.src = entry.dataUrl;
+        img.alt = entry.filename;
+        div.appendChild(img);
+        var rmBtn = document.createElement('button');
+        rmBtn.className = 'chat-attachment__remove';
+        rmBtn.innerHTML = '&times;';
+        rmBtn.setAttribute('data-idx', String(i));
+        rmBtn.addEventListener('click', (function(idx) {
+          return function(e) {
+            e.stopPropagation();
+            chatPendingImages.splice(idx, 1);
+            renderAttachments();
+          };
+        })(i));
+        div.appendChild(rmBtn);
+        chatPanelAttachments.appendChild(div);
+      }
+    }
+
+    function getAttachedImagePaths() {
+      var paths = [];
+      for (var i = 0; i < chatPendingImages.length; i++) {
+        if (chatPendingImages[i].serverPath) {
+          paths.push(chatPendingImages[i].serverPath);
+        }
+      }
+      return paths;
+    }
+
+    function getAttachedImageDataUrls() {
+      var urls = [];
+      for (var i = 0; i < chatPendingImages.length; i++) {
+        if (chatPendingImages[i].dataUrl) {
+          urls.push(chatPendingImages[i].dataUrl);
+        }
+      }
+      return urls;
+    }
+
+    function clearAttachments() {
+      chatPendingImages = [];
+      renderAttachments();
+    }
+
+    // Create a prompt element that shows clean text + inline image previews
+    function createPromptElement(promptText, imageDataUrls) {
+      var el = document.createElement('div');
+      el.className = 'chat-msg chat-msg--prompt';
+
+      // Strip the [Attached image...] block from display text
+      var cleanText = promptText.replace(/\n\n\[Attached images?:[\s\S]*?\]/g, '').trim();
+      if (cleanText.length > 300) cleanText = cleanText.slice(0, 300) + '...';
+
+      var textSpan = document.createElement('div');
+      textSpan.textContent = cleanText;
+      el.appendChild(textSpan);
+
+      // Show inline image thumbnails
+      if (imageDataUrls && imageDataUrls.length > 0) {
+        var imgContainer = document.createElement('div');
+        imgContainer.className = 'chat-prompt__images';
+        for (var i = 0; i < imageDataUrls.length; i++) {
+          var img = document.createElement('img');
+          img.src = imageDataUrls[i];
+          img.alt = 'Attached image ' + (i + 1);
+          img.addEventListener('click', (function(src) {
+            return function() { window.open(src, '_blank'); };
+          })(imageDataUrls[i]));
+          imgContainer.appendChild(img);
+        }
+        el.appendChild(imgContainer);
+      }
+      return el;
+    }
 
     // Fetch tool settings
     fetch('/api/settings')
@@ -3511,38 +5953,27 @@
     function dispatchAgent(projectPath, prompt, opts) {
       opts = opts || {};
 
-      // Always copy to clipboard as fallback
-      copyCommand(prompt, null);
-
-      // For tools that support spawning (cursor-ide, claude-code)
-      if (canDispatchAgent && projectPath && toolCanSpawn()) {
-        return fetch('/api/dispatch-agent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path: projectPath,
-            prompt: prompt,
-            repo: opts.repo || undefined,
-            number: opts.number || undefined,
-            taskId: opts.taskId || undefined
-          })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.dispatched) {
-            showToast('Agent dispatched!');
-            return true;
-          } else {
-            showToast('Dispatch failed: ' + (data.error || 'Unknown'));
-            return false;
-          }
-        })
-        .catch(function(err) {
-          console.error('Dispatch failed:', err);
-          showToast('Dispatch error - falling back to clipboard');
-          return false;
-        });
+      // If agent CLI is available, use embedded chat panel
+      if (canDispatchAgent && projectPath) {
+        var prContext = {
+          repo: opts.repo || '',
+          number: opts.number || '',
+          path: projectPath,
+          branch: opts.branch || ''
+        };
+        // Open chat panel and start a session
+        openChatPanel(prContext);
+        var label = opts.label || 'Agent';
+        if (opts.repo && opts.number) {
+          label = (opts.type || 'Agent') + ': ' + formatRepoName(opts.repo) + ' #' + opts.number;
+        }
+        chatPanelPrContext = prContext;
+        startChatSession(prompt, label, opts.type || 'all');
+        return Promise.resolve(true);
       }
+
+      // Fallback: copy to clipboard
+      copyCommand(prompt, null);
 
       // For cursor-ide fallback: copy to clipboard and open Cursor
       if (toolSettings.tool === 'cursor-ide' || toolSettings.tool === 'cursor-web') {
@@ -3733,7 +6164,17 @@
       var prCell = '<span class="pr-cell"><a href="https://github.com/' + escapeHtml(pr.repo) + '/pull/' + pr.number + '" target="_blank" rel="noopener">#' + pr.number + '</a></span>';
       var agentStatusHtml = getAgentStatusHtml(pr.repo, pr.number, path);
       var customCmdBtn = '<button type="button" class="custom-cmd-btn" title="Send custom command to agent" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(path || '') + '" data-branch="' + escapeAttr(pr.branch || '') + '"><i data-lucide="terminal"></i></button>';
-      var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + customCmdBtn + finishBtn + reviewBtn + '</div>';
+      // Chat button with badge for active sessions
+      var chatBadgeHtml = '';
+      for (var _sid in chatSessionMeta) {
+        var _sm = chatSessionMeta[_sid];
+        if (_sm && _sm.repo === pr.repo && _sm.number === pr.number && _sm.status) {
+          chatBadgeHtml = '<span class="chat-badge chat-badge--' + _sm.status + '"></span>';
+          break;
+        }
+      }
+      var chatBtn = '<button type="button" class="chat-btn" title="Open agent chat" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(path || '') + '" data-branch="' + escapeAttr(pr.branch || '') + '"><i data-lucide="message-circle"></i>' + chatBadgeHtml + '</button>';
+      var actionsCell = '<div class="actions-cell"><button type="button" class="row-refresh" title="Refresh this PR"><i data-lucide="refresh-cw"></i></button>' + forkBtn + chatBtn + customCmdBtn + finishBtn + reviewBtn + '</div>';
       var conflictsBanner = hasConflicts(pr) ? buildConflictsBanner(path, pr.repo, pr.number, pr.branch) : '';
       var checksHtml = '<div class="checks-container">' +
         '<span class="check-icon-wrap">' + checkCell(c.lint, path, pr.repo, pr.number, 'lint') + '</span>' +
@@ -3756,12 +6197,7 @@
         else if (agentJob.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Agent done'; }
         else if (agentJob.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Agent failed'; }
         var grillSprite = (agentJob.status === 'pending' || agentJob.status === 'running') ? '<span class="chef-grilling"></span> ' : '';
-        var bannerHref = toolLink(path);
-        if (bannerHref) {
-          agentBanner = '<a href="' + bannerHref + '" class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '">' + grillSprite + escapeHtml(bannerText) + '</a>';
-        } else {
-          agentBanner = '<div class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '">' + grillSprite + escapeHtml(bannerText) + '</div>';
-        }
+        agentBanner = '<button type="button" class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(path || '') + '">' + grillSprite + escapeHtml(bannerText) + '</button>';
       }
       return '<td>' + initCell + '</td>' +
         '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? ' <code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
@@ -3769,7 +6205,7 @@
         '<td class="actions-col">' + actionsCell + '</td>' +
         '<td>' + commentsHtml + '</td>' +
         '<td class="checks-cell" colspan="5">' + checksHtml + '</td>' +
-        '<td>' + previewLinks(pr.previews) + '</td>';
+        '<td>' + previewLinks(pr.previews, pr.previewDeployStatus) + '</td>';
     }
 
     function sortInitiativesByOrder(initiatives) {
@@ -3835,12 +6271,10 @@
         var label = escapeHtml(name);
         var statusBadge = getInitiativeStatusBadge(name);
         var textBlock = '<span class="init-card-text"><span>' + label + '</span>' + statusBadge + '</span>';
-        if (path) {
-          var cardHref = toolLink(path) || '#';
-          html += '<a href="' + cardHref + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="' + toolOpenTitle() + ' ' + escapeAttr(name) + '">' + iconWithEdit + textBlock + terminalBtn + orderupPrepBtn + '</a>';
-        } else {
-          html += '<a href="#" class="initiative-card initiative-card--nolink" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Create and open ' + escapeAttr(name) + '">' + iconWithEdit + textBlock + terminalBtn + orderupPrepBtn + '</a>';
-        }
+        var cursorBtn = path ? '<a href="' + (toolLink(path) || '#') + '" class="initiative-card__btn initiative-card__btn--cursor" title="' + toolOpenTitle() + '" onclick="event.stopPropagation()"><i data-lucide="external-link"></i></a>' : '';
+        var chatBtnHtml = '<button type="button" class="initiative-card__btn initiative-card__btn--chat" data-init-chat="' + escapeAttr(name) + '" data-init-path="' + escapeAttr(path || '') + '" title="Open agent chat" onclick="event.stopPropagation()"><i data-lucide="message-circle"></i></button>';
+        var cardButtons = '<span class="initiative-card__buttons">' + cursorBtn + chatBtnHtml + '</span>';
+        html += '<div class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '">' + iconWithEdit + textBlock + cardButtons + terminalBtn + orderupPrepBtn + '</div>';
       }
       cardsRoot.innerHTML = html;
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3879,6 +6313,9 @@
         placeholder.parentNode.removeChild(placeholder);
       }
     }
+
+    // Cached dashboard initiatives for chat PR switcher
+    var _cachedInitiatives = []; // Array of { name, prs: [...] } from last render
 
     // Compute status for each initiative: "grill", "backburner", "prep", "idle"
     var initiativeStatuses = {}; // { name: "grill" | "backburner" | "prep" | "idle" }
@@ -3925,6 +6362,7 @@
     }
 
     function render(data, newlyCreatedName) {
+      _cachedInitiatives = data.initiatives || [];
       computeInitiativeStatuses(data.initiatives);
       renderInitiativeCards(data.allInitiatives || [], newlyCreatedName);
       // Populate available initiative names for the picker dropdown
@@ -3958,12 +6396,13 @@
       if (!data.initiatives?.length) {
         root.innerHTML = '<div class="card"><p class="empty-state">No open PRs.</p></div>';
       } else {
-      function previewLinks(p) {
+      function previewLinks(p, deployStatus) {
         if (!p || (!p.viewer && !p.creator && !p.storybook)) return '<span class="check-icon none">—</span>';
+        var ds = deployStatus || {};
         const parts = [];
-        if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link" target="_blank" rel="noopener" title="Viewer">Viewer</a>');
-        if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link" target="_blank" rel="noopener" title="Creator">Creator</a>');
-        if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
+        if (p.viewer) parts.push('<a href="' + escapeUri(p.viewer) + '" class="preview-link preview-link--' + (ds.viewer || 'none') + '" target="_blank" rel="noopener" title="Viewer' + (ds.viewer ? ' (' + ds.viewer + ')' : '') + '">' + previewDeployDot(ds.viewer) + 'Viewer</a>');
+        if (p.creator) parts.push('<a href="' + escapeUri(p.creator) + '" class="preview-link preview-link--' + (ds.creator || 'none') + '" target="_blank" rel="noopener" title="Creator' + (ds.creator ? ' (' + ds.creator + ')' : '') + '">' + previewDeployDot(ds.creator) + 'Creator</a>');
+        if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link preview-link--' + (ds.storybook || 'none') + '" target="_blank" rel="noopener" title="Storybook' + (ds.storybook ? ' (' + ds.storybook + ')' : '') + '">' + previewDeployDot(ds.storybook) + 'Storybook</a>');
         return '<div class="preview-links">' + parts.join('') + '</div>';
       }
       // --- Separate PRs into active vs back-burnered ---
@@ -4175,6 +6614,27 @@
       var w = Math.round(sprite.sheetW / cols);
       var h = Math.round(sprite.sheetH / rows);
       return { x: col * w, y: row * h, w: w, h: h };
+    }
+    var CHEF_RUN_JUMP_FRAMES_KEY = 'orderup_chef_run_jump_frames';
+    var DEFAULT_FRAME_COORDS = {
+      imageWidth: 2245,
+      imageHeight: 600,
+      frames: [
+        { x: 4, y: 0, w: 550, h: 600 },
+        { x: 575, y: 0, w: 550, h: 600 },
+        { x: 1160, y: 0, w: 550, h: 600 },
+        { x: 1695, y: 0, w: 550, h: 600 }
+      ]
+    };
+    function getFrameCoords() {
+      try {
+        var raw = localStorage.getItem(CHEF_RUN_JUMP_FRAMES_KEY);
+        if (raw) {
+          var data = JSON.parse(raw);
+          if (data && data.frames && data.frames.length > 0) return data;
+        }
+      } catch (e) {}
+      return null;
     }
     function saveFrameCoords(data) {
       try {
@@ -5106,6 +7566,16 @@
         return;
       }
 
+      // Handle initiative chat button - opens chat modal for initiative
+      var initChatBtn = e.target && e.target.closest ? e.target.closest('[data-init-chat]') : null;
+      if (initChatBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var chatInitName = initChatBtn.getAttribute('data-init-chat') || '';
+        if (chatInitName) openChatModal(chatInitName, null, null);
+        return;
+      }
+
       // Handle initiative terminal button - opens cmd modal for non-PR tasks
       var initTermBtn = e.target && e.target.closest ? e.target.closest('.initiative-icon-terminal') : null;
       if (initTermBtn) {
@@ -5473,7 +7943,7 @@
           
           // Dispatch and show feedback
           incrementStat('bugs');
-          dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'All issues command sent!' });
+          dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), type: 'all', toastMessage: 'All issues command sent!' });
           finishBtn.innerHTML = '<i data-lucide="check"></i>';
           if (typeof lucide !== 'undefined') lucide.createIcons();
           finishBtn.disabled = false;
@@ -5889,11 +8359,11 @@
                 }
               }
               var cmd = buildCopyText(repo, num, 'checks', { check: check }) + failureText;
-              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Checks command sent!' });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), type: 'checks', toastMessage: 'Checks command sent!' });
             })
             .catch(function() {
               var cmd = buildCopyText(repo, num, 'checks', { check: check });
-              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Checks command sent!' });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), type: 'checks', toastMessage: 'Checks command sent!' });
             });
         }
         return;
@@ -5927,13 +8397,40 @@
                 }
               }
               var cmd = buildCopyText(repo, num, 'comments', { unresolved: unresolved }) + commentText;
-              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Comments command sent!' });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), type: 'comments', toastMessage: 'Comments command sent!' });
             })
             .catch(function() {
               var cmd = buildCopyText(repo, num, 'comments', { unresolved: unresolved });
-              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Comments command sent!' });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), type: 'comments', toastMessage: 'Comments command sent!' });
             });
         }
+        return;
+      }
+      // Chat button handler - opens chat modal for this PR
+      var chatBtnEl = e.target && e.target.closest ? e.target.closest('button.chat-btn') : null;
+      if (chatBtnEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        var repo = chatBtnEl.getAttribute('data-repo') || '';
+        var num = chatBtnEl.getAttribute('data-number') || '';
+        var path = chatBtnEl.getAttribute('data-path') || '';
+        var branch = chatBtnEl.getAttribute('data-branch') || '';
+        openChatPanel({ repo: repo, number: num, path: path, branch: branch });
+        return;
+      }
+      // Agent banner handler - opens chat modal focused on active session
+      var agentBannerEl = e.target && e.target.closest ? e.target.closest('[data-agent-banner]') : null;
+      if (agentBannerEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        var repo = agentBannerEl.getAttribute('data-repo') || '';
+        var num = agentBannerEl.getAttribute('data-number') || '';
+        var path = agentBannerEl.getAttribute('data-path') || '';
+        // Find the active session for this PR
+        var prContext = { repo: repo, number: num, path: path };
+        var activeSid = findSessionForPr(prContext);
+        var initName = lookupInitiativeForPr(prContext);
+        openChatModal(initName, prContext, activeSid);
         return;
       }
       // Custom command button handler - opens modal
@@ -5963,7 +8460,7 @@
         }
         incrementStat('conflicts');
         
-        dispatchAgent(path, buildRebaseCommand(repo, num, branch), { repo: repo, number: parseInt(num, 10), toastMessage: 'Rebase command sent!' });
+        dispatchAgent(path, buildRebaseCommand(repo, num, branch), { repo: repo, number: parseInt(num, 10), type: 'conflicts', toastMessage: 'Rebase command sent!' });
         return;
       }
     });
@@ -6436,6 +8933,87 @@
       sseConnection.addEventListener('agent-log', function(e) {
         var data = JSON.parse(e.data);
         appendAgentLog(data);
+      });
+
+      // Chat panel: agent session stream
+      sseConnection.addEventListener('agent-stream', function(e) {
+        var data = JSON.parse(e.data);
+        var sessionId = data.sessionId;
+        var msg = data.message;
+        if (!sessionId || !msg) return;
+
+        // Buffer the message
+        if (!chatSessionMessages[sessionId]) chatSessionMessages[sessionId] = [];
+        chatSessionMessages[sessionId].push(msg);
+
+        // Capture cursorChatId from init message
+        if (msg.type === 'system' && msg.subtype === 'init' && msg.raw && msg.raw.session_id) {
+          if (chatSessionMeta[sessionId]) {
+            chatSessionMeta[sessionId].cursorChatId = msg.raw.session_id;
+          }
+        }
+
+        // If this session is currently displayed, render it
+        if (chatActiveSessionId === sessionId) {
+          appendChatMessage(msg);
+        }
+      });
+
+      // Chat panel: agent session created
+      sseConnection.addEventListener('agent-session-created', function(e) {
+        var data = JSON.parse(e.data);
+        if (!data.id) return;
+        if (!chatSessionMeta[data.id]) {
+          chatSessionMeta[data.id] = {
+            repo: data.repo,
+            number: data.number,
+            status: data.status || 'running',
+            label: data.label || data.id,
+            startedAt: data.startedAt,
+            cursorChatId: data.cursorChatId
+          };
+        } else {
+          chatSessionMeta[data.id].status = data.status || 'running';
+          if (data.cursorChatId) chatSessionMeta[data.id].cursorChatId = data.cursorChatId;
+        }
+        if (!chatSessionMessages[data.id]) chatSessionMessages[data.id] = [];
+        renderSidebar();
+        // Update chat badge on PR row
+        if (data.repo && data.number) {
+          updateChatBadge(data.repo, data.number, 'running');
+        }
+      });
+
+      // Chat panel: agent session complete
+      sseConnection.addEventListener('agent-complete', function(e) {
+        var data = JSON.parse(e.data);
+        var sessionId = data.sessionId;
+        if (!sessionId) return;
+
+        var meta = chatSessionMeta[sessionId];
+        if (meta) {
+          meta.status = data.status || 'complete';
+          meta.completedAt = Date.now();
+        }
+
+        // Update UI if this session is displayed
+        if (chatActiveSessionId === sessionId) {
+          updateChatPanelStatusBadge(data.status || 'complete');
+          chatPanelCancel.style.display = 'none';
+          chatPanelInputArea.classList.add('visible');
+          // Remove typing cursor from any active assistant element
+          if (chatAssistantEl) {
+            chatAssistantEl.classList.remove('typing-cursor');
+            chatAssistantEl = null;
+          }
+        }
+
+        renderSidebar();
+
+        // Update chat badge on PR row
+        if (meta && meta.repo && meta.number) {
+          updateChatBadge(meta.repo, meta.number, data.status || 'complete');
+        }
       });
 
       sseConnection.addEventListener('ping', function(e) {

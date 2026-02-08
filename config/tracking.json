@@ -78,11 +78,6 @@
       "path": "/Users/brandonevery/Projects/taco",
       "description": "",
       "prs": []
-    },
-    "pizza": {
-      "path": "/Users/brandonevery/Projects/pizza",
-      "description": "",
-      "prs": []
     }
   },
   "repoToSubfolder": {
@@ -94,5 +89,5 @@
     "FrontRowXP/docs": "docs",
     "FrontRowXP/frontro-protoypes": "frontro-protoypes"
   },
-  "updatedAt": "2026-02-07T15:38:06.438Z"
+  "updatedAt": "2026-02-08T15:20:25.730Z"
 }
