@@ -17,8 +17,9 @@ if [[ -z "$REPO" || -z "$NUMBER" ]]; then
   exit 2
 fi
 
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 if [[ -z "$PATH_" ]]; then
-  DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   CONFIG="${DIR}/config/tracking.json"
   if [[ ! -f "$CONFIG" ]]; then
     echo "Missing $CONFIG" >&2
@@ -36,23 +37,18 @@ if [[ -z "$PATH_" ]]; then
   fi
 fi
 
-# Cursor CLI: prefer agent, else cursor-agent in ~/.local/bin
-AGENT_CMD=""
-if command -v agent &>/dev/null; then
-  AGENT_CMD="agent"
-elif [[ -x "$HOME/.local/bin/cursor-agent" ]]; then
-  AGENT_CMD="$HOME/.local/bin/cursor-agent"
-elif [[ -x "$HOME/.local/bin/agent" ]]; then
-  AGENT_CMD="$HOME/.local/bin/agent"
-fi
-if [[ -z "$AGENT_CMD" ]]; then
-  echo "Cursor CLI not found. Add ~/.local/bin to PATH or install: curl https://cursor.com/install -fsS | bash" >&2
-  exit 1
+# Read tool preference from settings
+SETTINGS="${DIR}/config/settings.json"
+TOOL="cursor-ide"
+AGENT_CMD_OVERRIDE=""
+if [[ -f "$SETTINGS" ]]; then
+  TOOL=$(jq -r '.tool // "cursor-ide"' "$SETTINGS" 2>/dev/null || echo "cursor-ide")
+  AGENT_CMD_OVERRIDE=$(jq -r '.agentCommand // ""' "$SETTINGS" 2>/dev/null || echo "")
 fi
 
 echo "Initiative path: $PATH_"
-echo "Running Cursor agent for $REPO#$NUMBER${CHECK:+ (focus: $CHECK)}..."
-cd "$PATH_"
+echo "Tool: $TOOL"
+echo "Running agent for $REPO#$NUMBER${CHECK:+ (focus: $CHECK)}..."
 
 case "$CHECK" in
   lint)   FOCUS="Fix only the failing **Lint** CI checks (lint, eslint, biome, prettier)."; ;;
@@ -63,4 +59,18 @@ case "$CHECK" in
   *)      FOCUS="Fix all failing CI checks and address all unresolved review comments."; ;;
 esac
 
-exec "$AGENT_CMD" -p "Handle PR #${NUMBER} in ${REPO}: ${FOCUS} Use \`gh\` and the pr-manager / handle-pr-comments workflow. Push fixes and re-check. Work in the subfolder for this repo if needed."
+PROMPT="Handle PR #${NUMBER} in ${REPO}: ${FOCUS} Use \`gh\` and the pr-manager / handle-pr-comments workflow. Push fixes and re-check. Work in the subfolder for this repo if needed."
+
+ADAPTERS_DIR="${DIR}/scripts/adapters"
+
+case "$TOOL" in
+  cursor-ide|cursor-web)
+    exec "${ADAPTERS_DIR}/cursor.sh" "$PATH_" "$PROMPT" "$AGENT_CMD_OVERRIDE"
+    ;;
+  claude-code)
+    exec "${ADAPTERS_DIR}/claude-code.sh" "$PATH_" "$PROMPT" "$AGENT_CMD_OVERRIDE"
+    ;;
+  generic|*)
+    exec "${ADAPTERS_DIR}/generic.sh" "$PATH_" "$PROMPT"
+    ;;
+esac

@@ -1,6 +1,7 @@
 import express from "express";
 import { readFile, writeFile, mkdir, rm } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -34,11 +35,19 @@ function broadcastSSE(event: string, data: unknown) {
 
 // Resolve pr-watcher root (config/tracking.json and scripts/ live here)
 function findRoot(): string {
+  // Prefer the actual project directory over bundled app resources
+  const projectRoot = join(process.env.HOME || "/tmp", "Projects", "order-up");
   const candidates = [
+    projectRoot,
     join(__dirname, ".."),
     process.cwd(),
     join(process.cwd(), ".."),
   ];
+  // When running inside Electron app bundle, __dirname may be inside .asar.unpacked
+  // Also check the original project location
+  if (__dirname.includes("app.asar")) {
+    candidates.unshift(projectRoot);
+  }
   for (const r of candidates) {
     const p = join(r, "config", "tracking.json");
     if (existsSync(p)) return r;
@@ -47,8 +56,68 @@ function findRoot(): string {
 }
 const ROOT = findRoot();
 const CONFIG_PATH = join(ROOT, "config", "tracking.json");
+const SETTINGS_PATH = join(ROOT, "config", "settings.json");
 const GET_PR_STATUS = join(ROOT, "scripts", "lib", "get-pr-status.sh");
 const RUN_AGENT_SCRIPT = join(ROOT, "scripts", "run-agent-for-pr.sh");
+
+type ToolProfile = "cursor-ide" | "cursor-web" | "claude-code" | "generic";
+const VALID_TOOLS: ToolProfile[] = ["cursor-ide", "cursor-web", "claude-code", "generic"];
+
+interface SettingsConfig {
+  tool: ToolProfile;
+  agentCommand: string | null;
+}
+
+async function readSettings(): Promise<SettingsConfig> {
+  try {
+    const raw = await readFile(SETTINGS_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as Partial<SettingsConfig>;
+    return {
+      tool: VALID_TOOLS.includes(parsed.tool as ToolProfile) ? (parsed.tool as ToolProfile) : "cursor-ide",
+      agentCommand: typeof parsed.agentCommand === "string" ? parsed.agentCommand : null,
+    };
+  } catch {
+    return { tool: "cursor-ide", agentCommand: null };
+  }
+}
+
+async function writeSettings(settings: SettingsConfig): Promise<void> {
+  await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2) + "\n");
+}
+
+/** Whether this tool profile supports background agent spawning. */
+function canSpawnAgent(tool: ToolProfile): boolean {
+  return tool === "cursor-ide" || tool === "claude-code";
+}
+
+/** Build the prompt string that an agent would receive for a PR fix. */
+function buildAgentPrompt(repo: string, number: number, check?: string): string {
+  let focus: string;
+  switch (check) {
+    case "lint":
+      focus = "Fix only the failing **Lint** CI checks (lint, eslint, biome, prettier).";
+      break;
+    case "type":
+      focus = "Fix only the failing **Type** CI checks (typecheck, tsc).";
+      break;
+    case "test":
+      focus = "Fix only the failing **Test** CI checks (unit tests, jest, vitest, coverage).";
+      break;
+    case "e2e":
+      focus = "Fix only the failing **E2E** CI checks (playwright, cypress, end-to-end).";
+      break;
+    case "other":
+      focus = "Fix only the failing **Other** CI checks (non-lint/type/test/e2e).";
+      break;
+    case "comments":
+      focus = "Address all unresolved review comments.";
+      break;
+    default:
+      focus = "Fix all failing CI checks and address all unresolved review comments.";
+      break;
+  }
+  return `Handle PR #${number} in ${repo}: ${focus} Use \`gh\` and the pr-manager / handle-pr-comments workflow. Push fixes and re-check. Work in the subfolder for this repo if needed.`;
+}
 
 interface TrackingConfig {
   initiatives: Record<
@@ -453,6 +522,31 @@ async function getPRCheckCategories(repo: string, number: number): Promise<PRSta
 // Webhook and API need JSON body
 app.use(express.json({ limit: "1mb" }));
 
+// GET /api/settings — read tool preference
+app.get("/api/settings", async (_req, res) => {
+  const settings = await readSettings();
+  res.json(settings);
+});
+
+// POST /api/settings — update tool preference
+app.post("/api/settings", async (req, res) => {
+  const current = await readSettings();
+  const tool = req.body?.tool;
+  const agentCommand = req.body?.agentCommand;
+  if (tool != null) {
+    if (!VALID_TOOLS.includes(tool)) {
+      res.status(400).json({ error: `tool must be one of: ${VALID_TOOLS.join(", ")}` });
+      return;
+    }
+    current.tool = tool;
+  }
+  if (agentCommand !== undefined) {
+    current.agentCommand = typeof agentCommand === "string" && agentCommand.trim() ? agentCommand.trim() : null;
+  }
+  await writeSettings(current);
+  res.json(current);
+});
+
 const FIX_CHECK_CATEGORIES = ["lint", "type", "test", "e2e", "other"] as const;
 
 // Fetch fresh PR data for a single PR (reusable for API and webhook broadcasts)
@@ -533,8 +627,8 @@ app.get("/api/pr", async (req, res) => {
   }
 });
 
-// POST /api/fix-check — trigger Cursor agent to fix a specific check category for a PR (then open Cursor via link)
-app.post("/api/fix-check", (req, res) => {
+// POST /api/fix-check — trigger agent to fix a specific check category for a PR
+app.post("/api/fix-check", async (req, res) => {
   const repo = req.body?.repo;
   const number = req.body?.number;
   const check = req.body?.check;
@@ -547,11 +641,22 @@ app.post("/api/fix-check", (req, res) => {
     res.status(400).json({ error: "check must be one of: lint, type, test, e2e, other" });
     return;
   }
-  const args = [repo, String(number)];
-  if (check) args.push(check);
-  if (typeof path === "string" && path.trim()) args.push(path.trim());
-  spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
-  res.status(202).json({ accepted: true, message: "Fix agent started" });
+  const settings = await readSettings();
+  const prompt = buildAgentPrompt(repo, number, check || undefined);
+
+  if (canSpawnAgent(settings.tool)) {
+    const args = [repo, String(number)];
+    if (check) args.push(check);
+    if (typeof path === "string" && path.trim()) args.push(path.trim());
+    spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+    res.status(202).json({ accepted: true, message: "Fix agent started", tool: settings.tool });
+  } else {
+    // Non-spawnable tools: return the prompt for the user to copy
+    const copyCommand = settings.tool === "cursor-web"
+      ? `Use @handle-pr-checks for PR #${number} in ${repo}${check ? ` (focus: ${check})` : ""}`
+      : prompt;
+    res.json({ accepted: false, mode: "clipboard", tool: settings.tool, prompt, copyCommand });
+  }
 });
 
 // POST /api/merge — merge a PR (repo + number). Uses squash merge. Only succeeds when PR is mergeable.
@@ -988,9 +1093,10 @@ app.post("/api/open-fork", (req, res) => {
   res.json({ opened: true });
 });
 
-// POST /api/fix-all-issues — spawn agents for all PRs with failed checks, unresolved comments, or conflicts
+// POST /api/fix-all-issues — spawn agents (or return prompts) for all PRs with failed checks, unresolved comments, or conflicts
 app.post("/api/fix-all-issues", async (req, res) => {
   try {
+    const settings = await readSettings();
     const raw = await readFile(CONFIG_PATH, "utf-8");
     const config: TrackingConfig = JSON.parse(raw);
 
@@ -1015,6 +1121,7 @@ app.post("/api/fix-all-issues", async (req, res) => {
     // Get all open PRs
     const allOpen = await listAllMyOpenPRs();
     const spawned: { repo: string; number: number; type: string; path?: string }[] = [];
+    const prompts: { repo: string; number: number; type: string; prompt: string }[] = [];
     const conflicts: { repo: string; number: number; path?: string }[] = [];
 
     for (const pr of allOpen) {
@@ -1034,7 +1141,7 @@ app.post("/api/fix-all-issues", async (req, res) => {
         conflicts.push({ repo: pr.repo, number: pr.number, path: path || undefined });
       }
 
-      // Check for failed checks - spawn agent for each failing category
+      // Check for failed checks
       const failingCategories: string[] = [];
       if (checks.lint === "failure") failingCategories.push("lint");
       if (checks.type === "failure") failingCategories.push("type");
@@ -1043,32 +1150,45 @@ app.post("/api/fix-all-issues", async (req, res) => {
       if (checks.other === "failure") failingCategories.push("other");
 
       for (const cat of failingCategories) {
-        const args = [pr.repo, String(pr.number), cat];
-        if (path) args.push(path);
-        spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
-        spawned.push({ repo: pr.repo, number: pr.number, type: `checks:${cat}`, path: path || undefined });
+        if (canSpawnAgent(settings.tool)) {
+          const args = [pr.repo, String(pr.number), cat];
+          if (path) args.push(path);
+          spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+          spawned.push({ repo: pr.repo, number: pr.number, type: `checks:${cat}`, path: path || undefined });
+        } else {
+          prompts.push({ repo: pr.repo, number: pr.number, type: `checks:${cat}`, prompt: buildAgentPrompt(pr.repo, pr.number, cat) });
+        }
       }
 
-      // Check for unresolved comments - spawn agent
+      // Check for unresolved comments
       if (status.unresolved > 0) {
-        const args = [pr.repo, String(pr.number), "comments"];
-        if (path) args.push(path);
-        spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
-        spawned.push({ repo: pr.repo, number: pr.number, type: "comments", path: path || undefined });
+        if (canSpawnAgent(settings.tool)) {
+          const args = [pr.repo, String(pr.number), "comments"];
+          if (path) args.push(path);
+          spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+          spawned.push({ repo: pr.repo, number: pr.number, type: "comments", path: path || undefined });
+        } else {
+          prompts.push({ repo: pr.repo, number: pr.number, type: "comments", prompt: buildAgentPrompt(pr.repo, pr.number, "comments") });
+        }
       }
     }
 
+    const totalActions = spawned.length + prompts.length;
     res.json({
+      tool: settings.tool,
       spawned,
+      prompts: prompts.length > 0 ? prompts : undefined,
       conflicts,
-      message: `Spawned ${spawned.length} agent(s). ${conflicts.length} PR(s) have conflicts requiring manual resolution.`,
+      message: canSpawnAgent(settings.tool)
+        ? `Spawned ${spawned.length} agent(s). ${conflicts.length} PR(s) have conflicts requiring manual resolution.`
+        : `Found ${totalActions} issue(s) to fix. ${conflicts.length} PR(s) have conflicts requiring manual resolution. Copy prompts to your tool.`,
     });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
 });
 
-// POST /api/finish-pr — spawn agents to fix ALL issues for a single PR (checks, comments, conflicts info)
+// POST /api/finish-pr — fix ALL issues for a single PR (checks, comments, conflicts info)
 app.post("/api/finish-pr", async (req, res) => {
   const repo = req.body?.repo;
   const number = req.body?.number;
@@ -1078,6 +1198,7 @@ app.post("/api/finish-pr", async (req, res) => {
     return;
   }
   try {
+    const settings = await readSettings();
     const [status, checks, mergeState] = await Promise.all([
       getPRStatus(repo, number),
       getPRCheckCategories(repo, number),
@@ -1085,6 +1206,7 @@ app.post("/api/finish-pr", async (req, res) => {
     ]);
 
     const spawned: { type: string }[] = [];
+    const prompts: { type: string; prompt: string }[] = [];
     const issues: string[] = [];
 
     // Check for conflicts
@@ -1094,7 +1216,7 @@ app.post("/api/finish-pr", async (req, res) => {
       issues.push("conflicts");
     }
 
-    // Spawn agents for each failing check category
+    // Handle each failing check category
     const failingCategories: string[] = [];
     if (checks.lint === "failure") failingCategories.push("lint");
     if (checks.type === "failure") failingCategories.push("type");
@@ -1103,30 +1225,43 @@ app.post("/api/finish-pr", async (req, res) => {
     if (checks.other === "failure") failingCategories.push("other");
 
     for (const cat of failingCategories) {
-      const args = [repo, String(number), cat];
-      if (path) args.push(path);
-      spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
-      spawned.push({ type: `checks:${cat}` });
+      if (canSpawnAgent(settings.tool)) {
+        const args = [repo, String(number), cat];
+        if (path) args.push(path);
+        spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+        spawned.push({ type: `checks:${cat}` });
+      } else {
+        prompts.push({ type: `checks:${cat}`, prompt: buildAgentPrompt(repo, number, cat) });
+      }
       issues.push(cat);
     }
 
-    // Spawn agent for unresolved comments
+    // Handle unresolved comments
     if (status.unresolved > 0) {
-      const args = [repo, String(number), "comments"];
-      if (path) args.push(path);
-      spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
-      spawned.push({ type: "comments" });
+      if (canSpawnAgent(settings.tool)) {
+        const args = [repo, String(number), "comments"];
+        if (path) args.push(path);
+        spawn(RUN_AGENT_SCRIPT, args, { cwd: ROOT, shell: true, stdio: "ignore" }).unref();
+        spawned.push({ type: "comments" });
+      } else {
+        prompts.push({ type: "comments", prompt: buildAgentPrompt(repo, number, "comments") });
+      }
       issues.push(`${status.unresolved} comments`);
     }
 
+    const totalActions = spawned.length + prompts.length;
     res.json({
       repo,
       number,
+      tool: settings.tool,
       spawned,
+      prompts: prompts.length > 0 ? prompts : undefined,
       issues,
       hasConflicts,
-      message: spawned.length > 0
-        ? `Spawned ${spawned.length} agent(s) for: ${issues.join(", ")}`
+      message: totalActions > 0
+        ? canSpawnAgent(settings.tool)
+          ? `Spawned ${spawned.length} agent(s) for: ${issues.join(", ")}`
+          : `Found ${totalActions} issue(s) to fix: ${issues.join(", ")}. Copy prompts to your tool.`
         : "No issues to fix",
     });
   } catch (e) {
@@ -1292,6 +1427,246 @@ app.delete("/api/agent-job/:repo/:number", (req, res) => {
     res.json({ success: true, id });
   } else {
     res.status(404).json({ error: "Job not found" });
+  }
+});
+
+// --- Agent CLI Dispatch ---
+
+// Check if agent CLI is available
+let agentCliAvailable = false;
+let agentCliBin = "agent";
+(async () => {
+  try {
+    const result = await runAllowExit("which", ["agent"]);
+    if (result && result.trim()) {
+      agentCliBin = result.trim();
+      agentCliAvailable = true;
+      console.log(`[Agent CLI] Found at: ${agentCliBin}`);
+    }
+  } catch {
+    console.log("[Agent CLI] Not found in PATH, dispatch disabled");
+  }
+})();
+
+// GET /api/capabilities — check what features are available
+app.get("/api/capabilities", (_req, res) => {
+  res.json({
+    agentCli: agentCliAvailable,
+    agentCliBin,
+  });
+});
+
+// POST /api/dispatch-agent — spawn agent CLI to run a prompt in a project directory
+app.post("/api/dispatch-agent", (req, res) => {
+  const { path: projectPath, prompt, repo, number, taskId } = req.body || {};
+  if (!projectPath || !prompt) {
+    res.status(400).json({ error: "Missing required fields: path, prompt" });
+    return;
+  }
+  if (!agentCliAvailable) {
+    res.status(503).json({ error: "Agent CLI not available. Install with: curl https://cursor.com/install -fsSL | bash" });
+    return;
+  }
+  if (!existsSync(projectPath)) {
+    res.status(400).json({ error: `Path does not exist: ${projectPath}` });
+    return;
+  }
+
+  // Create a pending job/task depending on context
+  const jobId = repo && number ? `${repo}#${number}` : taskId || null;
+  if (repo && number) {
+    const num = parseInt(number, 10);
+    const job: AgentJob = {
+      id: `${repo}#${num}`,
+      repo,
+      number: num,
+      type: "all",
+      status: "pending",
+      startedAt: Date.now(),
+    };
+    agentJobs.set(job.id, job);
+    broadcastSSE("agent-status", job);
+  }
+
+  const logId = repo && number ? `${repo}#${number}` : taskId || "task";
+  
+  // Derive the Cursor window name from the project path (last folder segment)
+  const projectName = projectPath.split("/").filter(Boolean).pop() || "";
+  
+  console.log(`[Dispatch] Sending to local Cursor IDE for "${projectName}" in ${projectPath}`);
+  broadcastSSE("agent-log", { id: logId, stream: "system", text: `Sending prompt to Cursor IDE (${projectName})`, ts: Date.now() });
+  
+  // Use AppleScript to:
+  // 1. Copy prompt to clipboard
+  // 2. Activate the right Cursor window
+  // 3. Open new composer (Cmd+I)
+  // 4. Paste (Cmd+V)
+  // 5. Send (Enter)
+  const escapedPrompt = prompt.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const appleScript = `
+    set the clipboard to "${escapedPrompt}"
+    
+    tell application "Cursor"
+      activate
+    end tell
+    
+    delay 0.5
+    
+    tell application "System Events"
+      tell process "Cursor"
+        set frontmost to true
+        set foundWindow to false
+        repeat with w in every window
+          if name of w contains "${projectName}" then
+            perform action "AXRaise" of w
+            set foundWindow to true
+            exit repeat
+          end if
+        end repeat
+        if not foundWindow then
+          -- Fall back to first window
+          if (count of windows) > 0 then
+            perform action "AXRaise" of window 1
+          end if
+        end if
+      end tell
+    end tell
+    
+    delay 0.5
+    
+    -- Open new composer (Cmd+I for agent mode)
+    tell application "System Events"
+      keystroke "i" using command down
+    end tell
+    
+    delay 1.0
+    
+    -- Paste the prompt
+    tell application "System Events"
+      keystroke "v" using command down
+    end tell
+    
+    delay 0.3
+    
+    -- Send it (Enter)
+    tell application "System Events"
+      key code 36
+    end tell
+    
+    return "Sent to Cursor"
+  `;
+  
+  const child = spawn("osascript", ["-e", appleScript], {
+    env: { ...process.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  
+  child.stdout?.on("data", (data: Buffer) => {
+    const text = data.toString().trim();
+    console.log(`[Dispatch] AppleScript: ${text}`);
+    broadcastSSE("agent-log", { id: logId, stream: "system", text: `Cursor: ${text}`, ts: Date.now() });
+  });
+  child.stderr?.on("data", (data: Buffer) => {
+    const text = data.toString().trim();
+    console.error(`[Dispatch] AppleScript error: ${text}`);
+    broadcastSSE("agent-log", { id: logId, stream: "stderr", text, ts: Date.now() });
+  });
+  child.on("exit", (code: number | null) => {
+    if (code === 0) {
+      console.log(`[Dispatch] Prompt sent to local Cursor IDE for ${logId}`);
+      broadcastSSE("agent-log", { id: logId, stream: "system", text: "Prompt sent to local Cursor agent", ts: Date.now() });
+    } else {
+      console.error(`[Dispatch] AppleScript failed with code ${code} for ${logId}`);
+      broadcastSSE("agent-log", { id: logId, stream: "stderr", text: `Failed to send to Cursor (exit ${code})`, ts: Date.now(), done: true });
+      if (jobId && repo && number) {
+        const failedJob: AgentJob = {
+          id: jobId,
+          repo,
+          number: parseInt(number, 10),
+          type: "all",
+          status: "failed",
+          startedAt: Date.now(),
+          completedAt: Date.now(),
+          error: `Failed to send to Cursor IDE`,
+        };
+        agentJobs.set(failedJob.id, failedJob);
+        broadcastSSE("agent-status", failedJob);
+      }
+    }
+  });
+  child.unref();
+
+  res.json({ dispatched: true, jobId, pid: child.pid });
+});
+
+// --- Initiative Tasks (non-PR agent work) ---
+
+interface InitiativeTask {
+  id: string;
+  initiative: string;
+  path: string;
+  command: string;
+  status: "pending" | "running" | "complete" | "failed";
+  startedAt: number;
+  completedAt?: number;
+  summary?: string;
+  error?: string;
+}
+const initiativeTasks = new Map<string, InitiativeTask>();
+
+// Clean up completed initiative tasks after 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, task] of initiativeTasks) {
+    if (task.completedAt && now - task.completedAt > 30 * 60 * 1000) {
+      initiativeTasks.delete(id);
+    }
+  }
+}, 60000);
+
+// POST /api/initiative-task — create or update an initiative task
+app.post("/api/initiative-task", (req, res) => {
+  try {
+    const { id, initiative, path, command, status, summary, error } = req.body || {};
+    if (!id || !status) {
+      res.status(400).json({ error: "Missing required fields: id, status" });
+      return;
+    }
+    const existing = initiativeTasks.get(id);
+    const task: InitiativeTask = {
+      id,
+      initiative: initiative || existing?.initiative || "",
+      path: path || existing?.path || "",
+      command: command || existing?.command || "",
+      status,
+      startedAt: existing?.startedAt || Date.now(),
+      completedAt: status === "complete" || status === "failed" ? Date.now() : undefined,
+      summary: summary || existing?.summary,
+      error: error || existing?.error,
+    };
+    initiativeTasks.set(id, task);
+    console.log(`[Initiative Task] ${id}: ${status}${summary ? ` - ${summary}` : ""}`);
+    broadcastSSE("initiative-task", task);
+    res.json(task);
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// GET /api/initiative-tasks — get all active initiative tasks
+app.get("/api/initiative-tasks", (_req, res) => {
+  res.json(Array.from(initiativeTasks.values()));
+});
+
+// DELETE /api/initiative-task/:id — clear a specific initiative task
+app.delete("/api/initiative-task/:id", (req, res) => {
+  const id = decodeURIComponent(req.params.id);
+  if (initiativeTasks.has(id)) {
+    initiativeTasks.delete(id);
+    broadcastSSE("initiative-task", { id, status: "cleared" });
+    res.json({ success: true, id });
+  } else {
+    res.status(404).json({ error: "Task not found" });
   }
 });
 

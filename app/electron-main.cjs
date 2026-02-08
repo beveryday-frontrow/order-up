@@ -76,9 +76,22 @@ function startServer() {
   console.log(`[server] Starting: ${cmd} ${args.join(" ")}`);
   console.log(`[server] cwd: ${cwd}`);
 
+  // Ensure full PATH is available (Electron apps on macOS get minimal PATH)
+  const shellPath = [
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+    process.env.HOME + "/.local/bin",
+    process.env.HOME + "/.nvm/versions/node/v22.0.0/bin",
+  ].join(":");
+  const fullPath = shellPath + (process.env.PATH ? ":" + process.env.PATH : "");
+
   serverProcess = spawn(cmd, args, {
     cwd: cwd,
-    env: { ...process.env, PORT: String(PORT), ELECTRON_RUN_AS_NODE: "1" },
+    env: { ...process.env, PATH: fullPath, PORT: String(PORT), ELECTRON_RUN_AS_NODE: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
 

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Order Up! Sprite Editor</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 1rem; }
+    h1 { font-size: 1.2rem; margin: 0 0 1rem; color: #f59e0b; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .tab { padding: 0.5rem 1rem; border: 1px solid #334155; border-radius: 6px; background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.85rem; }
+    .tab.active { background: #f59e0b; color: #000; border-color: #f59e0b; font-weight: 600; }
+    .editor { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .preview-wrap { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+    .preview-wrap canvas { display: block; image-rendering: pixelated; }
+    .controls { display: flex; flex-direction: column; gap: 0.75rem; min-width: 280px; }
+    .control-group { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; }
+    .control-group h3 { margin: 0 0 0.5rem; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .field label { font-size: 0.8rem; color: #94a3b8; min-width: 80px; }
+    .field input[type="number"] { width: 70px; padding: 0.3rem 0.4rem; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 0.85rem; }
+    .field input[type="range"] { flex: 1; }
+    .field .value { font-size: 0.8rem; color: #f59e0b; min-width: 40px; text-align: right; }
+    .anim-preview { display: flex; align-items: center; gap: 1rem; }
+    .anim-canvas { background: #000; border: 1px solid #334155; border-radius: 4px; image-rendering: pixelated; }
+    .btn { padding: 0.5rem 1rem; border: 1px solid #334155; border-radius: 6px; background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 0.85rem; }
+    .btn:hover { border-color: #f59e0b; color: #f59e0b; }
+    .btn-primary { background: #f59e0b; color: #000; border-color: #f59e0b; font-weight: 600; }
+    .btn-primary:hover { background: #fbbf24; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .status { font-size: 0.8rem; color: #10b981; margin-top: 0.5rem; min-height: 1.2em; }
+    .grid-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+    .info { font-size: 0.75rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Sprite Editor</h1>
+  <div class="tabs">
+    <button class="tab active" data-sprite="running">Running</button>
+    <button class="tab" data-sprite="jumping">Jumping</button>
+    <button class="tab" data-sprite="grilling">Grilling</button>
+  </div>
+  <div class="editor">
+    <div class="preview-wrap">
+      <canvas id="preview" width="400" height="530"></canvas>
+      <canvas id="grid-overlay" class="grid-overlay" width="400" height="530"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <h3>Grid</h3>
+        <div class="field"><label>Columns</label><input type="number" id="cols" value="6" min="1" max="20"><span class="value" id="colsVal">6</span></div>
+        <div class="field"><label>Rows</label><input type="number" id="rows" value="7" min="1" max="20"><span class="value" id="rowsVal">7</span></div>
+        <div class="field"><label>Offset X</label><input type="number" id="offsetX" value="0"><span class="value" id="offsetXVal">0</span></div>
+        <div class="field"><label>Offset Y</label><input type="number" id="offsetY" value="0"><span class="value" id="offsetYVal">0</span></div>
+        <div class="field"><label>Pad X</label><input type="number" id="padX" value="0"><span class="value" id="padXVal">0</span></div>
+        <div class="field"><label>Pad Y</label><input type="number" id="padY" value="0"><span class="value" id="padYVal">0</span></div>
+        <div class="field"><label>Total frames</label><input type="number" id="totalFrames" value="42" min="1"><span class="value" id="totalFramesVal">42</span></div>
+        <div class="info" id="frameInfo">Frame: 129x146</div>
+      </div>
+      <div class="control-group">
+        <h3>Animation Preview</h3>
+        <div class="field"><label>FPS</label><input type="range" id="fps" min="1" max="30" value="15"><span class="value" id="fpsVal">15</span></div>
+        <div class="field"><label>Scale</label><input type="range" id="scale" min="1" max="5" value="2"><span class="value" id="scaleVal">2x</span></div>
+        <div class="anim-preview">
+          <canvas id="animCanvas" class="anim-canvas" width="128" height="146"></canvas>
+          <div>
+            <div id="animFrameNum" style="font-size:0.8rem;color:#94a3b8;">Frame 0/42</div>
+            <button class="btn" id="playPause">Pause</button>
+          </div>
+        </div>
+      </div>
+      <div class="control-group">
+        <h3>Save</h3>
+        <div class="actions">
+          <button class="btn btn-primary" id="saveBtn">Save Settings</button>
+          <button class="btn" id="resetBtn">Reset</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="info" style="margin-top:0.5rem;">Settings saved to localStorage and used by Order Up loading game and grilling animations.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var SPRITES = {
+      running: { url: '/images/sprite-running.png', key: 'orderup_sprite_running', defaults: { cols: 6, rows: 7, offsetX: 0, offsetY: 0, padX: 0, padY: 0, totalFrames: 42, fps: 15 } },
+      jumping: { url: '/images/sprite-jumping.png', key: 'orderup_sprite_jumping', defaults: { cols: 6, rows: 7, offsetX: 0, offsetY: 0, padX: 0, padY: 0, totalFrames: 42, fps: 15 } },
+      grilling: { url: '/images/sprite-grilling.png', key: 'orderup_sprite_grilling', defaults: { cols: 6, rows: 7, offsetX: 0, offsetY: 0, padX: 0, padY: 0, totalFrames: 42, fps: 15 } }
+    };
+
+    var current = 'running';
+    var img = new Image();
+    var playing = true;
+    var animFrame = 0;
+    var lastAnimTime = 0;
+
+    var preview = document.getElementById('preview');
+    var pctx = preview.getContext('2d');
+    var gridCanvas = document.getElementById('grid-overlay');
+    var gctx = gridCanvas.getContext('2d');
+    var animCanvas = document.getElementById('animCanvas');
+    var actx = animCanvas.getContext('2d');
+
+    function getSettings() {
+      return {
+        cols: parseInt(document.getElementById('cols').value) || 6,
+        rows: parseInt(document.getElementById('rows').value) || 7,
+        offsetX: parseInt(document.getElementById('offsetX').value) || 0,
+        offsetY: parseInt(document.getElementById('offsetY').value) || 0,
+        padX: parseInt(document.getElementById('padX').value) || 0,
+        padY: parseInt(document.getElementById('padY').value) || 0,
+        totalFrames: parseInt(document.getElementById('totalFrames').value) || 42,
+        fps: parseInt(document.getElementById('fps').value) || 15
+      };
+    }
+
+    function setSettings(s) {
+      document.getElementById('cols').value = s.cols;
+      document.getElementById('rows').value = s.rows;
+      document.getElementById('offsetX').value = s.offsetX;
+      document.getElementById('offsetY').value = s.offsetY;
+      document.getElementById('padX').value = s.padX;
+      document.getElementById('padY').value = s.padY;
+      document.getElementById('totalFrames').value = s.totalFrames;
+      document.getElementById('fps').value = s.fps || 15;
+      updateLabels();
+    }
+
+    function updateLabels() {
+      var s = getSettings();
+      document.getElementById('colsVal').textContent = s.cols;
+      document.getElementById('rowsVal').textContent = s.rows;
+      document.getElementById('offsetXVal').textContent = s.offsetX;
+      document.getElementById('offsetYVal').textContent = s.offsetY;
+      document.getElementById('padXVal').textContent = s.padX;
+      document.getElementById('padYVal').textContent = s.padY;
+      document.getElementById('totalFramesVal').textContent = s.totalFrames;
+      document.getElementById('fpsVal').textContent = s.fps;
+      document.getElementById('scaleVal').textContent = document.getElementById('scale').value + 'x';
+      if (img.naturalWidth) {
+        var fw = (img.naturalWidth - s.offsetX - s.padX * (s.cols - 1)) / s.cols;
+        var fh = (img.naturalHeight - s.offsetY - s.padY * (s.rows - 1)) / s.rows;
+        document.getElementById('frameInfo').textContent = 'Frame: ' + Math.round(fw) + 'x' + Math.round(fh) + 'px (sheet: ' + img.naturalWidth + 'x' + img.naturalHeight + ')';
+      }
+    }
+
+    function getFrame(s, fi) {
+      var col = fi % s.cols;
+      var row = Math.floor(fi / s.cols);
+      var fw = (img.naturalWidth - s.offsetX - s.padX * (s.cols - 1)) / s.cols;
+      var fh = (img.naturalHeight - s.offsetY - s.padY * (s.rows - 1)) / s.rows;
+      return {
+        x: s.offsetX + col * (fw + s.padX),
+        y: s.offsetY + row * (fh + s.padY),
+        w: fw,
+        h: fh
+      };
+    }
+
+    function drawPreview() {
+      if (!img.naturalWidth) return;
+      var maxW = 500, maxH = 660;
+      var sc = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      var cw = Math.round(img.naturalWidth * sc);
+      var ch = Math.round(img.naturalHeight * sc);
+      preview.width = cw;
+      preview.height = ch;
+      gridCanvas.width = cw;
+      gridCanvas.height = ch;
+      pctx.imageSmoothingEnabled = false;
+      pctx.drawImage(img, 0, 0, cw, ch);
+
+      // Draw grid
+      var s = getSettings();
+      gctx.clearRect(0, 0, cw, ch);
+      gctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+      gctx.lineWidth = 1;
+      var fw = (img.naturalWidth - s.offsetX - s.padX * (s.cols - 1)) / s.cols;
+      var fh = (img.naturalHeight - s.offsetY - s.padY * (s.rows - 1)) / s.rows;
+      var frameNum = 0;
+      gctx.font = '10px monospace';
+      gctx.fillStyle = 'rgba(245, 158, 11, 0.8)';
+      for (var r = 0; r < s.rows; r++) {
+        for (var c = 0; c < s.cols; c++) {
+          if (frameNum >= s.totalFrames) break;
+          var x = (s.offsetX + c * (fw + s.padX)) * sc;
+          var y = (s.offsetY + r * (fh + s.padY)) * sc;
+          var w = fw * sc;
+          var h = fh * sc;
+          gctx.strokeRect(x, y, w, h);
+          gctx.fillText(frameNum, x + 2, y + 11);
+          frameNum++;
+        }
+      }
+    }
+
+    function drawAnimFrame() {
+      if (!img.naturalWidth) return;
+      var s = getSettings();
+      var sc = parseInt(document.getElementById('scale').value) || 2;
+      var f = getFrame(s, animFrame % s.totalFrames);
+      var dw = Math.round(f.w * sc);
+      var dh = Math.round(f.h * sc);
+      animCanvas.width = dw;
+      animCanvas.height = dh;
+      actx.imageSmoothingEnabled = false;
+      actx.clearRect(0, 0, dw, dh);
+      actx.drawImage(img, f.x, f.y, f.w, f.h, 0, 0, dw, dh);
+      document.getElementById('animFrameNum').textContent = 'Frame ' + (animFrame % s.totalFrames) + '/' + s.totalFrames;
+    }
+
+    function animLoop(now) {
+      if (playing) {
+        var s = getSettings();
+        var interval = 1000 / s.fps;
+        if (now - lastAnimTime > interval) {
+          animFrame = (animFrame + 1) % s.totalFrames;
+          lastAnimTime = now;
+          drawAnimFrame();
+        }
+      }
+      requestAnimationFrame(animLoop);
+    }
+
+    function loadSprite(name) {
+      current = name;
+      var sprite = SPRITES[name];
+      // Load saved settings or defaults
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(sprite.key)); } catch(e) {}
+      setSettings(saved || sprite.defaults);
+      animFrame = 0;
+      img = new Image();
+      img.onload = function() {
+        updateLabels();
+        drawPreview();
+        drawAnimFrame();
+      };
+      img.src = sprite.url;
+      // Update tab active state
+      document.querySelectorAll('.tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.sprite === name);
+      });
+      document.getElementById('status').textContent = '';
+    }
+
+    // Tab clicks
+    document.querySelectorAll('.tab').forEach(function(t) {
+      t.addEventListener('click', function() { loadSprite(t.dataset.sprite); });
+    });
+
+    // Input changes
+    document.querySelectorAll('input').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        updateLabels();
+        drawPreview();
+        drawAnimFrame();
+      });
+    });
+
+    // Play/pause
+    document.getElementById('playPause').addEventListener('click', function() {
+      playing = !playing;
+      this.textContent = playing ? 'Pause' : 'Play';
+    });
+
+    // Save
+    document.getElementById('saveBtn').addEventListener('click', function() {
+      var s = getSettings();
+      var sprite = SPRITES[current];
+      // Save grid settings
+      localStorage.setItem(sprite.key, JSON.stringify(s));
+      // Also save computed frame data for the main app
+      var frames = [];
+      for (var i = 0; i < s.totalFrames; i++) {
+        frames.push(getFrame(s, i));
+      }
+      localStorage.setItem(sprite.key + '_frames', JSON.stringify({
+        url: sprite.url,
+        sheetW: img.naturalWidth,
+        sheetH: img.naturalHeight,
+        cols: s.cols,
+        rows: s.rows,
+        totalFrames: s.totalFrames,
+        fps: s.fps,
+        frames: frames
+      }));
+      document.getElementById('status').textContent = 'Saved ' + current + ' settings!';
+      setTimeout(function() { document.getElementById('status').textContent = ''; }, 2000);
+    });
+
+    // Reset
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      var sprite = SPRITES[current];
+      localStorage.removeItem(sprite.key);
+      localStorage.removeItem(sprite.key + '_frames');
+      setSettings(sprite.defaults);
+      drawPreview();
+      drawAnimFrame();
+      document.getElementById('status').textContent = 'Reset to defaults';
+    });
+
+    // Click on preview to highlight frame
+    preview.addEventListener('click', function(e) {
+      var s = getSettings();
+      var rect = preview.getBoundingClientRect();
+      var sc = preview.width / img.naturalWidth;
+      var mx = (e.clientX - rect.left) / sc;
+      var my = (e.clientY - rect.top) / sc;
+      var fw = (img.naturalWidth - s.offsetX - s.padX * (s.cols - 1)) / s.cols;
+      var fh = (img.naturalHeight - s.offsetY - s.padY * (s.rows - 1)) / s.rows;
+      var col = Math.floor((mx - s.offsetX) / (fw + s.padX));
+      var row = Math.floor((my - s.offsetY) / (fh + s.padY));
+      if (col >= 0 && col < s.cols && row >= 0 && row < s.rows) {
+        animFrame = row * s.cols + col;
+        playing = false;
+        document.getElementById('playPause').textContent = 'Play';
+        drawAnimFrame();
+      }
+    });
+
+    // Init
+    loadSprite('running');
+    requestAnimationFrame(animLoop);
+  </script>
+</body>
+</html>

@@ -1,21 +1,95 @@
-# 🍔 Order Up!
+# Order Up!
 
-A fun, food-themed PR monitoring dashboard that helps you track and manage pull requests across multiple repositories. Each "initiative" (feature/project) gets its own food-themed icon, and you can monitor check statuses, unresolved comments, and quickly copy commands to fix issues.
+A fun, food-themed PR monitoring dashboard that helps you track and manage pull requests across multiple repositories. Each "initiative" (feature/project) gets its own food-themed icon, and you can monitor check statuses, unresolved comments, and trigger AI agents to fix issues.
 
 ## Features
 
-- **Initiative-based PR grouping** — Organize PRs by project/feature with custom food icons
-- **Real-time status monitoring** — Track lint, type, test, e2e checks and unresolved comments
-- **One-click commands** — Copy fix commands to paste into Cursor
-- **Drag-and-drop reordering** — Prioritize initiatives your way
-- **Auto-generated pixel art icons** — Creates retro Burger Time-style icons via DALL-E
-- **Cursor Skills integration** — Use `@handle-pr-checks` and `@handle-pr-comments` skills
+- **Initiative-based PR grouping** -- Organize PRs by project/feature with custom food icons
+- **Real-time status monitoring** -- Track lint, type, test, e2e checks and unresolved comments
+- **Multi-tool support** -- Works with Cursor IDE, Cursor Web, Claude Code, or any AI coding tool
+- **One-click fix actions** -- Spawn agents or copy prompts to fix failing checks and comments
+- **Drag-and-drop reordering** -- Prioritize initiatives your way
+- **Auto-generated pixel art icons** -- Creates retro Burger Time-style icons via Gemini Imagen
+- **MCP server** -- Integrates with any MCP-compatible AI tool
+
+---
+
+## Quick Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/beveryday-frontrow/order-up.git
+cd order-up
+
+# 2. Install dependencies for the dashboard app
+cd app && npm install
+
+# 3. Start the dashboard
+npm run dev
+```
+
+Then open **http://localhost:3333** in your browser and select your tool from the dropdown in the header.
+
+---
+
+## Choosing Your Tool
+
+Order Up supports multiple AI coding tools. Select your tool from the dropdown in the dashboard header, or set it in `config/settings.json`:
+
+```json
+{
+  "tool": "cursor-ide",
+  "agentCommand": null
+}
+```
+
+### Tool Profiles
+
+| Tool | Agent Spawning | Deep Links | How Fix Buttons Work |
+|------|---------------|------------|---------------------|
+| **Cursor IDE** | Background agents via CLI | `cursor://` links | Spawns agent automatically |
+| **Cursor Web** | No | `cursor://` links | Copies `@skill` command to clipboard |
+| **Claude Code** | Background agents via CLI | No | Shows terminal command in modal |
+| **Generic** | No | No | Shows raw prompt in modal to copy |
+
+### Cursor IDE Setup
+
+This is the default. Requires the Cursor CLI agent:
+
+```bash
+# Install Cursor CLI (if not already installed)
+curl https://cursor.com/install -fsS | bash
+```
+
+The dashboard will spawn Cursor agents in the background when you click fix buttons. Cursor skills in `.cursor/skills/` provide context to the agent.
+
+### Cursor Web Setup
+
+Set tool to `cursor-web` in the dashboard dropdown. Fix actions will copy `@handle-pr-checks` or `@handle-pr-comments` commands to your clipboard for pasting into Cursor chat.
+
+### Claude Code Setup
+
+```bash
+# 1. Install Claude Code CLI
+# See: https://docs.anthropic.com/en/docs/claude-code
+
+# 2. Set tool preference
+echo '{"tool": "claude-code", "agentCommand": null}' > config/settings.json
+# Or use the dashboard dropdown
+
+# 3. Start the dashboard
+cd app && npm run dev
+```
+
+Claude Code reads `CLAUDE.md` at the repo root for context, and follows the workflows in `skills/workflows/`. The dashboard will show terminal commands (`claude -p "..."`) when you click fix buttons.
+
+### Generic / Other Tools
+
+Set tool to `generic`. Fix actions will show the raw agent prompt in a modal for you to copy into whatever tool you use.
 
 ---
 
 ## Prerequisites
-
-Before setting up Order Up!, make sure you have the following installed:
 
 ### 1. Node.js (v18+)
 
@@ -25,8 +99,6 @@ node --version
 
 # Install via Homebrew (macOS)
 brew install node
-
-# Or download from https://nodejs.org/
 ```
 
 ### 2. GitHub CLI (`gh`)
@@ -44,48 +116,23 @@ brew install gh
 gh auth login
 ```
 
-### 3. ImageMagick
+### 3. ImageMagick (Optional)
 
 Required for removing backgrounds from generated initiative icons.
 
 ```bash
-# Check if installed
-magick --version
-
 # Install via Homebrew (macOS)
 brew install imagemagick
 ```
 
-### 4. OpenAI API Key (Optional)
+### 4. Gemini API Key (Optional)
 
-Only needed if you want to generate custom initiative icons via DALL-E.
+Only needed if you want to generate custom initiative icons.
 
 ```bash
 # Set in your shell profile (~/.zshrc or ~/.bashrc)
 export GEMINI_API_KEY="your-gemini-api-key-here"
 ```
-
-Get your API key from: https://platform.openai.com/api-keys
-
----
-
-## Quick Setup
-
-Run these commands to get up and running:
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/beveryday-frontrow/order-up.git
-cd order-up
-
-# 2. Install dependencies for the dashboard app
-cd app && npm install
-
-# 3. Start the dashboard
-npm run dev
-```
-
-Then open **http://localhost:3333** in your browser.
 
 ---
 
@@ -93,7 +140,7 @@ Then open **http://localhost:3333** in your browser.
 
 ### `config/tracking.json`
 
-This file defines your initiatives and which PRs they track:
+Defines your initiatives and which PRs they track:
 
 ```json
 {
@@ -112,72 +159,59 @@ This file defines your initiatives and which PRs they track:
 }
 ```
 
-#### Initiative Properties
+### `config/settings.json`
 
-| Property | Description |
-|----------|-------------|
-| `path` | Absolute path to the project folder (used for "Open in Cursor" links) |
-| `description` | Optional description shown in the focus input |
-| `prs` | Array of PRs this initiative manages |
-
-#### PR Properties
-
-| Property | Description |
-|----------|-------------|
-| `repo` | GitHub repo in `owner/repo` format |
-| `number` | PR number |
-| `branch` | Branch name (optional, helps with checkout commands) |
-
-### Adding a New Initiative
-
-1. **Via the Dashboard:** Click the "+" button, enter a food name, and it will:
-   - Generate a pixel art icon via DALL-E
-   - Create the folder structure
-   - Clone your configured repos into it
-
-2. **Manually:** Add an entry to `config/tracking.json`:
+Tool preference and optional agent command override:
 
 ```json
-"taco": {
-  "path": "/Users/you/Projects/taco",
-  "description": "Taco feature",
-  "prs": []
+{
+  "tool": "cursor-ide",
+  "agentCommand": null
 }
 ```
 
+| Field | Description |
+|-------|-------------|
+| `tool` | One of: `cursor-ide`, `cursor-web`, `claude-code`, `generic` |
+| `agentCommand` | Optional override for the agent CLI binary path (e.g., `/usr/local/bin/claude`). When `null`, auto-detected. |
+
+### Adding a New Initiative
+
+1. **Via the Dashboard:** Click the "+" button, enter a food name, and it will generate an icon, create folders, and clone repos.
+
+2. **Manually:** Add an entry to `config/tracking.json`.
+
 ---
 
-## Cursor Skills
+## AI Tool Integration
 
-Order Up! includes Cursor skills that help AI agents fix PR issues:
+### Cursor Skills
 
-### `@handle-pr-checks`
+For Cursor IDE/Web users, Order Up includes skills in `.cursor/skills/`:
 
-Fetches failing check details and helps fix lint, type, test, or e2e failures.
+- `@handle-pr-checks` -- Fix failing CI checks
+- `@handle-pr-comments` -- Resolve PR review comments
+- `@pr-manager` -- PR dashboard and orchestration
 
-**Usage:** When a check is failing, click on it to copy a command like:
-```
-Use @handle-pr-checks for PR #123 (failing lint check): https://github.com/owner/repo/pull/123
-```
+### Claude Code
 
-### `@handle-pr-comments`
+For Claude Code users, `CLAUDE.md` at the repo root provides equivalent context. Workflows are in `skills/workflows/`.
 
-Fetches unresolved PR comments and helps address reviewer feedback.
+### Portable Workflows
 
-**Usage:** Click on unresolved comments count to copy:
-```
-Use @handle-pr-comments for PR #123 (3 unresolved comments): https://github.com/owner/repo/pull/123
-```
+Tool-agnostic workflow definitions live in `skills/workflows/`:
 
-### `@pr-manager`
+- `handle-checks.md` -- Step-by-step guide to fix failing CI checks
+- `handle-comments.md` -- Step-by-step guide to resolve PR review comments
+- `pr-manager.md` -- PR dashboard and orchestration
 
-Dashboard view skill for managing multiple PRs.
+These contain `gh` CLI commands and git operations that work with any tool.
 
 ---
 
 ## MCP Server (Optional)
 
-An MCP server allows Cursor to trigger PR fixes directly:
+The MCP server allows AI tools to trigger PR fixes programmatically:
 
 ```bash
 # Install and run
@@ -185,7 +219,7 @@ cd mcp-server && npm install
 npx tsx server.ts
 ```
 
-Add to your Cursor MCP settings (`.cursor/mcp.json`):
+### Add to Cursor MCP settings (`.cursor/mcp.json`):
 
 ```json
 {
@@ -199,6 +233,12 @@ Add to your Cursor MCP settings (`.cursor/mcp.json`):
 }
 ```
 
+### Add to Claude Code MCP settings:
+
+Claude Code also supports MCP servers. Add the same configuration to your Claude Code MCP settings.
+
+The MCP server reads `config/settings.json` to determine which agent adapter to use.
+
 ---
 
 ## Scripts
@@ -207,8 +247,21 @@ Add to your Cursor MCP settings (`.cursor/mcp.json`):
 |--------|---------|
 | `scripts/show-tracking.sh` | Print which initiatives manage which PRs |
 | `scripts/pull-open-prs.sh` | List open PRs for all configured repos |
-| `scripts/run-agent-for-pr.sh REPO NUMBER` | Run Cursor agent to fix a specific PR |
+| `scripts/run-agent-for-pr.sh REPO NUMBER` | Run agent to fix a specific PR (uses configured tool) |
 | `scripts/poll-and-fix.sh` | Check all tracked PRs and fix any with issues |
+| `scripts/dashboard.sh` | CLI dashboard view (terminal-friendly) |
+
+### Agent Adapters
+
+The `scripts/adapters/` directory contains tool-specific agent runners:
+
+| Adapter | Used By |
+|---------|---------|
+| `adapters/cursor.sh` | Cursor IDE, Cursor Web |
+| `adapters/claude-code.sh` | Claude Code |
+| `adapters/generic.sh` | Generic (prints prompt) |
+
+`run-agent-for-pr.sh` reads `config/settings.json` and delegates to the appropriate adapter.
 
 ---
 
@@ -222,16 +275,33 @@ Add to your Cursor MCP settings (`.cursor/mcp.json`):
 
 ---
 
-## One-Line Setup Script
+## Project Structure
 
-Copy and paste this to set everything up at once:
-
-```bash
-# Full setup (run from anywhere)
-git clone https://github.com/beveryday-frontrow/order-up.git ~/Projects/order-up && \
-cd ~/Projects/order-up/app && \
-npm install && \
-npm run dev
+```
+order-up/
+├── app/                        # Express server + dashboard UI
+│   ├── server.ts               # Main backend (port 3333)
+│   ├── public/index.html       # Dashboard frontend
+│   └── electron-main.cjs       # Electron desktop wrapper
+├── config/
+│   ├── tracking.json           # Initiative/PR tracking config
+│   └── settings.json           # Tool preference
+├── skills/
+│   └── workflows/              # Portable workflow definitions
+│       ├── handle-checks.md
+│       ├── handle-comments.md
+│       └── pr-manager.md
+├── scripts/
+│   ├── adapters/               # Tool-specific agent adapters
+│   │   ├── cursor.sh
+│   │   ├── claude-code.sh
+│   │   └── generic.sh
+│   ├── run-agent-for-pr.sh     # Agent router
+│   └── lib/                    # Helper scripts
+├── mcp-server/                 # MCP server for IDE integration
+├── .cursor/skills/             # Cursor-specific skills
+├── CLAUDE.md                   # Claude Code context file
+└── README.md
 ```
 
 ---
@@ -252,14 +322,12 @@ Install ImageMagick:
 brew install imagemagick
 ```
 
-### Initiative icons have green backgrounds
+### Agent not spawning
 
-The app uses ImageMagick to remove green backgrounds from DALL-E generated images. If this fails:
-
-```bash
-# Manually remove green background from an image
-magick input.png -alpha set -fuzz 30% -fill none -opaque "#00FF00" output.png
-```
+1. Check your tool setting: `cat config/settings.json`
+2. For Cursor IDE: verify `agent` or `cursor-agent` is in your PATH
+3. For Claude Code: verify `claude` is in your PATH
+4. Check adapter scripts have execute permission: `chmod +x scripts/adapters/*.sh`
 
 ### PR data not loading
 
@@ -283,7 +351,3 @@ cd app && npm run dev
 ## License
 
 MIT
-
----
-
-**Made with 🍟 by the Order Up! team**

@@ -68,7 +68,7 @@
     }
     /* Ensure interactive elements in the header area are clickable over the drag bar */
     .header a, .header button, .header input, .header select,
-    .initiative-card, .initiative-icon-edit {
+    .initiative-card, .initiative-icon-edit, .initiative-icon-terminal {
       -webkit-app-region: no-drag;
     }
     .header-left {
@@ -284,6 +284,76 @@
       background: var(--accent-hover);
       border-color: var(--accent-hover);
     }
+    /* Tool selector */
+    .tool-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .tool-selector select {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.75rem;
+      font-family: inherit;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+    }
+    .tool-selector select:hover {
+      border-color: var(--accent);
+    }
+    .tool-selector select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+    }
+    .tool-selector-label {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+    /* Prompt modal for clipboard-based tools */
+    .prompt-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .prompt-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow: auto;
+    }
+    .prompt-modal h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+    }
+    .prompt-modal pre {
+      background: var(--bg);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-muted);
+      margin: 0 0 1rem;
+    }
+    .prompt-modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -371,12 +441,17 @@
       border-radius: 50%;
       font-size: 11px;
       font-weight: 700;
+      background: transparent;
     }
-    .check-icon.pass { background: rgba(34, 197, 94, 0.2); color: var(--success); }
-    .check-icon.fail { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .check-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .check-icon.pass { color: var(--success); }
+    .check-icon.fail { color: var(--danger); }
     .check-icon.fail.fix-check { cursor: pointer; text-decoration: none; }
     .check-icon.fail.fix-check:hover { filter: brightness(1.15); }
-    .check-icon.pending { background: rgba(234, 179, 8, 0.2); color: var(--warning); }
+    .check-icon.pending { color: var(--warning); }
     .check-icon.none {
       background: transparent;
       color: var(--text-dim);
@@ -727,9 +802,10 @@
     .pr-title { color: var(--text-muted); font-size: 0.8rem; display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .loading, .error { padding: 1.25rem; color: var(--text-muted); }
     /* Platformer loading stage (Burger Time style) */
+    .loading-card { overflow: visible; }
     .loading-stage {
       padding: 1rem 0 0;
-      overflow: hidden;
+      overflow: visible;
       height: 160px;
       position: relative;
       background: linear-gradient(180deg, var(--surface-hover) 0%, var(--surface) 70%, #2d2419 100%);
@@ -785,16 +861,67 @@
       position: absolute;
       left: 14%;
       bottom: 24px;
-      /* Default: match DEFAULT_FRAME_COORDS (2200×600, frame 0 at 4,0,550×600) so preview and game match */
-      width: 59px;
+      width: 56px;
       height: 64px;
-      background: url(/images/chef-run-jump.png) no-repeat 0 0;
-      background-size: 235px 64px;
-      background-position: 0 0;
+      background: url(/images/sprite-running.png) no-repeat 0 0;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       filter: none;
       z-index: 2;
+      transform: scaleX(-1);
+    }
+    /* Grilling chef sprite animation for agent-active rows */
+    /* 945x1024 sheet, 6 cols x 6 rows = 36 frames */
+    /* Frame: 157.5x170.67 -> display at 40x43px, sheet scaled to 240x246px */
+    .chef-grilling {
+      display: inline-block;
+      width: 40px;
+      height: 43px;
+      background: url(/images/sprite-grilling.png) no-repeat;
+      background-size: 240px 246px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      vertical-align: middle;
+      animation: chef-grill-anim 2.4s steps(1) infinite;
+    }
+    @keyframes chef-grill-anim {
+      /* 36 frames at ~15fps = 2.4s. Row height = 41px at display scale */
+      0%       { background-position: 0 0; }
+      2.778%   { background-position: -40px 0; }
+      5.556%   { background-position: -80px 0; }
+      8.333%   { background-position: -120px 0; }
+      11.111%  { background-position: -160px 0; }
+      13.889%  { background-position: -200px 0; }
+      16.667%  { background-position: 0 -41px; }
+      19.444%  { background-position: -40px -41px; }
+      22.222%  { background-position: -80px -41px; }
+      25.000%  { background-position: -120px -41px; }
+      27.778%  { background-position: -160px -41px; }
+      30.556%  { background-position: -200px -41px; }
+      33.333%  { background-position: 0 -82px; }
+      36.111%  { background-position: -40px -82px; }
+      38.889%  { background-position: -80px -82px; }
+      41.667%  { background-position: -120px -82px; }
+      44.444%  { background-position: -160px -82px; }
+      47.222%  { background-position: -200px -82px; }
+      50.000%  { background-position: 0 -123px; }
+      52.778%  { background-position: -40px -123px; }
+      55.556%  { background-position: -80px -123px; }
+      58.333%  { background-position: -120px -123px; }
+      61.111%  { background-position: -160px -123px; }
+      63.889%  { background-position: -200px -123px; }
+      66.667%  { background-position: 0 -164px; }
+      69.444%  { background-position: -40px -164px; }
+      72.222%  { background-position: -80px -164px; }
+      75.000%  { background-position: -120px -164px; }
+      77.778%  { background-position: -160px -164px; }
+      80.556%  { background-position: -200px -164px; }
+      83.333%  { background-position: 0 -205px; }
+      86.111%  { background-position: -40px -205px; }
+      88.889%  { background-position: -80px -205px; }
+      91.667%  { background-position: -120px -205px; }
+      94.444%  { background-position: -160px -205px; }
+      97.222%  { background-position: -200px -205px; }
     }
     .loading-stage__chef--hit {
       filter: brightness(1.4) sepia(0.3);
@@ -1285,6 +1412,8 @@
       white-space: nowrap;
     }
     .agent-banner svg { width: 12px; height: 12px; }
+    a.agent-banner, .prep-work-task-row .agent-banner { text-decoration: none; cursor: pointer; }
+    a.agent-banner:hover, .prep-work-task-row .agent-banner:hover { filter: brightness(1.2); }
     .agent-banner--pending {
       background: rgba(107, 114, 128, 0.2);
       color: #9ca3af;
@@ -1355,6 +1484,157 @@
       text-align: center;
       width: 40px;
     }
+    /* Back Burner section styling */
+    .back-burner-section {
+      opacity: 0.7;
+      border: 1px solid rgba(245, 158, 11, 0.15);
+    }
+    .back-burner-section:hover { opacity: 0.85; }
+    .back-burner-section .card-header {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.05) 100%);
+      color: #f59e0b;
+    }
+    /* Prep Work section */
+    .prep-work-task-row td { padding: 0.6rem 0.75rem; }
+    .prep-work-task-cmd {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .prep-work-clear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+      transition: all 0.15s;
+    }
+    .prep-work-clear-btn:hover { color: #ef4444; border-color: #ef4444; }
+
+    /* Agent Log Panel */
+    .agent-log-toggle {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 8000;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .agent-log-toggle svg { width: 20px; height: 20px; }
+    .agent-log-toggle:hover { color: #f59e0b; border-color: #f59e0b; box-shadow: 0 4px 16px rgba(245,158,11,0.3); }
+    .agent-log-toggle .log-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 2px solid #0f172a;
+      display: none;
+      animation: agentPulse 1.2s ease-in-out infinite;
+    }
+    .agent-log-toggle.has-activity .log-badge { display: block; }
+    .agent-log-panel {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 420px;
+      height: 100vh;
+      background: #0c1222;
+      border-left: 1px solid var(--border);
+      z-index: 8500;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.3s ease;
+      box-shadow: -8px 0 30px rgba(0,0,0,0.4);
+    }
+    .agent-log-panel.open { right: 0; }
+    .agent-log-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .agent-log-panel__title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .agent-log-panel__title svg { width: 16px; height: 16px; color: #f59e0b; }
+    .agent-log-panel__close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+    .agent-log-panel__close:hover { color: var(--text); }
+    .agent-log-panel__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.72rem;
+      line-height: 1.5;
+    }
+    .agent-log-entry {
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      margin-bottom: 1px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .agent-log-entry--system {
+      color: #6b7280;
+      font-style: italic;
+    }
+    .agent-log-entry--stdout { color: #d1d5db; }
+    .agent-log-entry--stderr { color: #fca5a5; }
+    .agent-log-entry--status {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.08);
+      font-weight: 500;
+    }
+    .agent-log-entry--status.failed {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .agent-log-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 0.5rem 0;
+    }
+    .agent-log-panel__clear {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+    }
+    .agent-log-panel__clear:hover { color: var(--text); border-color: var(--text-muted); }
     /* Row loading overlay */
     .row-loading-overlay {
       position: absolute;
@@ -1835,6 +2115,37 @@
       transition: background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s;
       cursor: grab;
     }
+    .init-card-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .init-status-badge {
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      line-height: 1;
+      width: fit-content;
+    }
+    .init-status--grill {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    .init-status--backburner {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+    .init-status--prep {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+    .init-status--idle {
+      background: rgba(107, 114, 128, 0.15);
+      color: #6b7280;
+    }
     .initiative-card:active {
       cursor: grabbing;
     }
@@ -1894,6 +2205,51 @@
     .initiative-icon-edit:hover {
       background: var(--accent);
     }
+    .initiative-card { position: relative; }
+    .initiative-icon-terminal {
+      position: absolute;
+      top: -8px;
+      right: 16px;
+      width: 20px;
+      height: 20px;
+      background: #f59e0b;
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s, transform 0.15s;
+      padding: 0;
+      z-index: 5;
+    }
+    .initiative-icon-terminal svg { width: 10px; height: 10px; }
+    .initiative-card:hover .initiative-icon-terminal { opacity: 1; }
+    .initiative-icon-terminal:hover { background: #f97316; transform: scale(1.15); }
+    .initiative-orderup-prep {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      background: var(--surface);
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s, transform 0.15s;
+      padding: 0;
+      z-index: 5;
+      overflow: hidden;
+    }
+    .initiative-orderup-prep img { width: 14px; height: 14px; image-rendering: pixelated; }
+    .initiative-card:hover .initiative-orderup-prep { opacity: 1; }
+    .initiative-orderup-prep:hover { transform: scale(1.15); border-color: var(--accent); }
     /* Placeholder/loading state for new initiatives */
     .initiative-card--creating {
       border-style: dashed;
@@ -2201,10 +2557,21 @@
 </head>
 <body>
   <div class="drag-bar"></div>
+  <button class="agent-log-toggle" id="agent-log-toggle" title="Agent Log"><i data-lucide="scroll-text"></i><span class="log-badge"></span></button>
+  <div class="agent-log-panel" id="agent-log-panel">
+    <div class="agent-log-panel__header">
+      <span class="agent-log-panel__title"><i data-lucide="scroll-text"></i> Agent Log</span>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <button class="agent-log-panel__clear" id="agent-log-clear">Clear</button>
+        <button class="agent-log-panel__close" id="agent-log-close"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="agent-log-panel__body" id="agent-log-body"></div>
+  </div>
   <div class="app">
     <header class="header">
       <div class="header-left">
-        <a href="cursor://file/Users/brandonevery/Projects/order-up" class="logo-link" title="Open Order Up in Cursor"><img src="/images/orderup.png" alt="Order Up!" class="logo-img" /></a>
+        <a href="#" class="logo-link" id="logo-link" title="Order Up!"><img src="/images/orderup.png" alt="Order Up!" class="logo-img" /></a>
         <div class="game-stats" id="game-stats">
           <div class="game-stats__scores">
             <div class="game-stats__player">
@@ -2247,17 +2614,16 @@
         <span class="meta" id="updated">—</span>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <div class="unassigned-dropdown" id="unassigned-dropdown">
-          <button type="button" class="unassigned-dropdown__btn" id="unassigned-dropdown-btn" title="PRs without an initiative">
-            <i data-lucide="alert-circle"></i>
-            <span>Unassigned</span>
-            <span class="unassigned-dropdown__badge" id="unassigned-count">0</span>
-          </button>
-          <div class="unassigned-dropdown__menu" id="unassigned-menu">
-            <div class="unassigned-dropdown__empty">No unassigned PRs</div>
-          </div>
+        <div class="tool-selector">
+          <span class="tool-selector-label">Tool:</span>
+          <select id="tool-select" title="Choose your AI coding tool">
+            <option value="cursor-ide">Cursor IDE</option>
+            <option value="cursor-web">Cursor Web</option>
+            <option value="claude-code">Claude Code</option>
+            <option value="generic">Generic</option>
+          </select>
         </div>
-        <button type="button" id="fix-all-issues" class="btn" title="Spawn agents to fix all failed checks and unresolved comments">Fix All Issues</button>
+        <button type="button" id="fix-all-issues" class="btn" title="Fix all failed checks and unresolved comments">Fix All Issues</button>
         <button type="button" id="new-food-project" class="btn" title="Create a new project named after a random food, with generated icon and cloned repos">New food project</button>
         <button type="button" id="refresh" class="btn btn-primary">Refresh</button>
       </div>
@@ -2670,20 +3036,34 @@
       return 'https://github.com/' + repo + '/pull/' + number;
     }
 
-    /** Build copyable prompt for Cursor: /handle-pr-checks or /handle-pr-comments with PR number, link, and specific context. */
+    /** Build copyable prompt adapted to the current tool. */
     function buildCopyText(repo, number, kind, context) {
       if (!repo || !number) return '';
       var link = prLink(repo, number);
       var statusReminder = '\n\n**IMPORTANT**: After completing, report status to Order Up:\ncurl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"complete","type":"' + kind + '","summary":"Done"}\'';
       
+      var resolveReminder = '';
+      if (kind === 'comments') {
+        resolveReminder = '\n\n**CRITICAL**: After addressing each comment, you MUST mark it as resolved in GitHub using:\n```bash\ngh api graphql -f query=\'mutation { resolveReviewThread(input: {threadId: "THREAD_ID"}) { thread { isResolved } } }\'\n```\nGet thread IDs from: `gh api graphql -f query=\'{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: ' + number + ') { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { nodes { body } } } } } } }\'`\nJust addressing the code is NOT enough - comments must show as resolved in GitHub!';
+      }
+
+      // Cursor IDE/Web: use skill references
+      if (toolSettings.tool === 'cursor-ide' || toolSettings.tool === 'cursor-web') {
+        if (kind === 'comments') {
+          var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
+          return 'Use @handle-pr-comments for PR #' + number + countText + ': ' + link + resolveReminder + statusReminder;
+        }
+        var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
+        return 'Use @handle-pr-checks for PR #' + number + checkText + ': ' + link + statusReminder;
+      }
+
+      // Claude Code / Generic: use direct prompts
       if (kind === 'comments') {
         var countText = context && context.unresolved ? ' (' + context.unresolved + ' unresolved comment' + (context.unresolved > 1 ? 's' : '') + ')' : '';
-        var resolveReminder = '\n\n**CRITICAL**: After addressing each comment, you MUST mark it as resolved in GitHub using:\n```bash\ngh api graphql -f query=\'mutation { resolveReviewThread(input: {threadId: "THREAD_ID"}) { thread { isResolved } } }\'\n```\nGet thread IDs from: `gh api graphql -f query=\'{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: ' + number + ') { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { nodes { body } } } } } } }\'`\nJust addressing the code is NOT enough - comments must show as resolved in GitHub!';
-        return 'Use /handle-pr-comments for PR #' + number + countText + ': ' + link + resolveReminder + statusReminder;
+        return 'Handle PR #' + number + ' in ' + repo + countText + ': Address all unresolved review comments. Follow the workflow in skills/workflows/handle-comments.md. PR: ' + link + resolveReminder + statusReminder;
       }
-      // For checks, include which check category is failing
       var checkText = context && context.check ? ' (failing ' + context.check + ' check)' : '';
-      return 'Use /handle-pr-checks for PR #' + number + checkText + ': ' + link + statusReminder;
+      return 'Handle PR #' + number + ' in ' + repo + checkText + ': Fix the failing CI checks. Follow the workflow in skills/workflows/handle-checks.md. PR: ' + link + statusReminder;
     }
 
     /** Build comprehensive rebase/conflict resolution instructions */
@@ -2816,19 +3196,97 @@
         cmd += 'curl -X POST http://localhost:3333/api/agent-job -H "Content-Type: application/json" -d \'{"repo":"' + repo + '","number":' + number + ',"status":"failed","type":"all","error":"Brief description"}\'\n';
         cmd += '```\n';
         
-        // Create pending job
-        createPendingJob(repo, parseInt(number, 10), 'all');
-        
-        // Copy and open Cursor
-        copyCommand(cmd, 'Custom command copied!');
-        if (path && path.trim()) {
-          window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
-        }
+        // Dispatch agent
+        dispatchAgent(path, cmd, { repo: repo, number: parseInt(number, 10), toastMessage: 'Custom command sent!' });
         
         close();
       });
       
       // Enter to send (Cmd/Ctrl+Enter)
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          document.getElementById('cmd-modal-send').click();
+        }
+        if (e.key === 'Escape') close();
+      });
+    }
+
+    // Initiative command modal (non-PR tasks)
+    function openInitiativeCmdModal(initiative, initPath) {
+      var existing = document.querySelector('.cmd-modal-backdrop');
+      if (existing) existing.remove();
+      
+      var backdrop = document.createElement('div');
+      backdrop.className = 'cmd-modal-backdrop';
+      backdrop.innerHTML = '<div class="cmd-modal">' +
+        '<div class="cmd-modal__header">' +
+          '<div>' +
+            '<div class="cmd-modal__title">Send Command to Agent</div>' +
+            '<div class="cmd-modal__subtitle">' + escapeHtml(initiative) + ' (no PR)</div>' +
+          '</div>' +
+          '<button type="button" class="cmd-modal__close" id="cmd-modal-close"><i data-lucide="x"></i></button>' +
+        '</div>' +
+        '<textarea class="cmd-modal__input" id="cmd-modal-input" placeholder="Type your command for the Cursor agent...&#10;&#10;e.g. Set up the project structure for the new feature"></textarea>' +
+        '<div class="cmd-modal__actions">' +
+          '<button type="button" class="cmd-modal__btn cmd-modal__btn--cancel" id="cmd-modal-cancel">Cancel</button>' +
+          '<button type="button" class="cmd-modal__btn cmd-modal__btn--send" id="cmd-modal-send">Copy &amp; Open Cursor</button>' +
+        '</div>' +
+        '<div class="cmd-modal__hint">Your command will be wrapped with agent status tracking calls to Order Up</div>' +
+      '</div>';
+      
+      document.body.appendChild(backdrop);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      
+      var input = document.getElementById('cmd-modal-input');
+      input.focus();
+      
+      function close() { backdrop.remove(); }
+      backdrop.addEventListener('click', function(e) { if (e.target === backdrop) close(); });
+      document.getElementById('cmd-modal-close').addEventListener('click', close);
+      document.getElementById('cmd-modal-cancel').addEventListener('click', close);
+      
+      document.getElementById('cmd-modal-send').addEventListener('click', function() {
+        var userCmd = input.value.trim();
+        if (!userCmd) { input.focus(); return; }
+        
+        var taskId = initiative + '-' + Date.now();
+        
+        var cmd = userCmd + '\n\n';
+        cmd += '**IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.\n\n';
+        cmd += 'On Start (run immediately):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + taskId + '","initiative":"' + initiative + '","path":"' + (initPath || '') + '","command":"' + userCmd.replace(/'/g, "\\'").replace(/"/g, '\\"').slice(0, 100) + '","status":"running"}\'\n';
+        cmd += '```\n\n';
+        cmd += 'On Complete (run after finishing):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + taskId + '","status":"complete","summary":"Done"}\'\n';
+        cmd += '```\n\n';
+        cmd += 'On Failure (if you cannot complete):\n';
+        cmd += '```bash\n';
+        cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + taskId + '","status":"failed","error":"Brief description"}\'\n';
+        cmd += '```\n';
+        
+        // Create pending task locally and on server
+        initiativeTasks[taskId] = {
+          id: taskId,
+          initiative: initiative,
+          path: initPath || '',
+          command: userCmd,
+          status: 'pending',
+          startedAt: Date.now()
+        };
+        fetch('/api/initiative-task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId, initiative: initiative, path: initPath || '', command: userCmd, status: 'pending' })
+        }).catch(function() {});
+        renderPrepWorkTable();
+        
+        dispatchAgent(initPath, cmd, { taskId: taskId, toastMessage: 'Initiative command sent!' });
+        close();
+      });
+      
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
@@ -2862,13 +3320,13 @@
 
     function checkCell(status, path, repo, number, category) {
       var title = category === 'lint' ? 'Lint' : category === 'type' ? 'Type' : category === 'test' ? 'Test' : category === 'e2e' ? 'E2E' : 'Other';
-      if (status === 'success') return '<span class="check-icon pass" title="Pass">✓</span>';
+      if (status === 'success') return '<span class="check-icon pass" title="Pass"><i data-lucide="chef-hat"></i></span>';
       if (status === 'failure' && repo != null && number != null) {
-        var cursorUrl = (path && path.trim()) ? ('cursor://file/' + escapeUri(path)) : '#';
-        return '<a href="' + cursorUrl + '" class="check-icon fail fix-check" data-path="' + escapeAttr(path || '') + '" data-repo="' + escapeHtml(repo) + '" data-number="' + number + '" data-check="' + escapeHtml(category) + '" title="Fix ' + title + (path ? ' (opens Cursor)' : '') + '">✗</a>';
+        var fixUrl = (path && path.trim()) ? (toolLink(path) || '#') : '#';
+        return '<a href="' + fixUrl + '" class="check-icon fail fix-check" data-path="' + escapeAttr(path || '') + '" data-repo="' + escapeHtml(repo) + '" data-number="' + number + '" data-check="' + escapeHtml(category) + '" title="Fix ' + title + '"><i data-lucide="skull"></i></a>';
       }
-      if (status === 'failure') return '<span class="check-icon fail" title="Fail">✗</span>';
-      if (status === 'pending') return '<span class="check-icon pending" title="Pending">◐</span>';
+      if (status === 'failure') return '<span class="check-icon fail" title="Fail"><i data-lucide="skull"></i></span>';
+      if (status === 'pending') return '<span class="check-icon pending" title="Pending"><i data-lucide="flame"></i></span>';
       return '<span class="check-icon none" title="None">—</span>';
     }
     function previewLinks(p) {
@@ -2880,11 +3338,11 @@
       return '<div class="preview-links">' + parts.join('') + '</div>';
     }
     function mergeCell(mergeable, mergeStateStatus) {
-      if (mergeable === true) return '<span class="check-icon pass" title="No conflicts">✓</span>';
-      if (mergeable === false) return '<span class="check-icon fail" title="Has conflicts – resolve before merge">✗</span>';
+      if (mergeable === true) return '<span class="check-icon pass" title="No conflicts"><i data-lucide="chef-hat"></i></span>';
+      if (mergeable === false) return '<span class="check-icon fail" title="Has conflicts – resolve before merge"><i data-lucide="skull"></i></span>';
       var status = (mergeStateStatus || '').toUpperCase();
       if (status === 'DIRTY' || status === 'CONFLICTING' || status === 'BLOCKED') {
-        return '<span class="check-icon fail" title="' + escapeAttr(mergeStateStatus || 'Has conflicts') + ' – resolve before merge">✗</span>';
+        return '<span class="check-icon fail" title="' + escapeAttr(mergeStateStatus || 'Has conflicts') + ' – resolve before merge"><i data-lucide="skull"></i></span>';
       }
       var tip = (mergeStateStatus && status !== 'CLEAN') ? escapeAttr(mergeStateStatus) : 'Unknown';
       return '<span class="check-icon none" title="' + tip + '">—</span>';
@@ -2940,14 +3398,231 @@
     
     // Global agent jobs state - tracks running/completed agent jobs per PR
     var agentJobs = {};
+    var initiativeTasks = {}; // { id: task }
+    var canDispatchAgent = false; // set by /api/capabilities on load
+    var toolSettings = { tool: 'cursor-ide', agentCommand: null }; // set by /api/settings on load
+
+    // Fetch tool settings
+    fetch('/api/settings')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        toolSettings = data;
+        var sel = document.getElementById('tool-select');
+        if (sel) sel.value = data.tool || 'cursor-ide';
+        console.log('[Settings] Tool:', toolSettings.tool);
+      })
+      .catch(function() { /* defaults */ });
+
+    // Save tool setting when dropdown changes
+    document.addEventListener('DOMContentLoaded', function() {
+      var sel = document.getElementById('tool-select');
+      if (sel) {
+        sel.addEventListener('change', function() {
+          var newTool = sel.value;
+          toolSettings.tool = newTool;
+          fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tool: newTool })
+          }).then(function() {
+            showToast('Tool set to ' + newTool);
+          }).catch(function() {
+            showToast('Failed to save tool setting');
+          });
+        });
+      }
+    });
+
+    // Check if agent CLI dispatch is available
+    fetch('/api/capabilities')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        canDispatchAgent = !!data.agentCli;
+        console.log('[Capabilities] Agent CLI dispatch:', canDispatchAgent);
+      })
+      .catch(function() { canDispatchAgent = false; });
+
+    /** Whether the current tool supports background agent spawning. */
+    function toolCanSpawn() {
+      return toolSettings.tool === 'cursor-ide' || toolSettings.tool === 'claude-code';
+    }
+
+    /** Build the appropriate "open in tool" URL for a path. Returns null for tools that don't support deep links. */
+    function toolLink(path) {
+      if (!path || !path.trim()) return null;
+      if (toolSettings.tool === 'cursor-ide' || toolSettings.tool === 'cursor-web') {
+        return 'cursor://file/' + escapeUri(path);
+      }
+      // claude-code and generic don't have deep links
+      return null;
+    }
+
+    /** Title text for "open in" links. */
+    function toolOpenTitle() {
+      switch (toolSettings.tool) {
+        case 'cursor-ide': return 'Open in Cursor';
+        case 'cursor-web': return 'Open in Cursor';
+        case 'claude-code': return 'Open in terminal';
+        default: return 'Open';
+      }
+    }
+
+    /** Build an <a> tag or <span> for a path, adapting to the current tool. */
+    function toolAnchor(path, innerHtml, extraClass, extraAttrs) {
+      var href = toolLink(path);
+      var title = toolOpenTitle();
+      var cls = extraClass ? ' class="' + extraClass + '"' : '';
+      var attrs = extraAttrs || '';
+      if (href) {
+        return '<a href="' + href + '"' + cls + ' title="' + title + '"' + attrs + '>' + innerHtml + '</a>';
+      }
+      if (path && path.trim() && toolSettings.tool === 'claude-code') {
+        // For claude-code, clicking copies a cd + claude command
+        return '<a href="#" onclick="copyCommand(\'cd ' + escapeAttr(path) + ' && claude\', \'Terminal command copied!\'); return false;"' + cls + ' title="Copy terminal command"' + attrs + '>' + innerHtml + '</a>';
+      }
+      return '<span' + cls + '>' + innerHtml + '</span>';
+    }
+
+    /** Show a modal with a prompt for the user to copy (for clipboard-based tools). */
+    function showPromptModal(title, prompt) {
+      var overlay = document.createElement('div');
+      overlay.className = 'prompt-modal-overlay';
+      overlay.innerHTML = '<div class="prompt-modal">' +
+        '<h3>' + escapeHtml(title) + '</h3>' +
+        '<pre>' + escapeHtml(prompt) + '</pre>' +
+        '<div class="prompt-modal-actions">' +
+        '<button class="btn" onclick="this.closest(\'.prompt-modal-overlay\').remove()">Close</button>' +
+        '<button class="btn btn-primary" id="prompt-modal-copy">Copy to clipboard</button>' +
+        '</div></div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(ev) {
+        if (ev.target === overlay) overlay.remove();
+      });
+      var copyBtn = overlay.querySelector('#prompt-modal-copy');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          copyCommand(prompt, 'Prompt copied!');
+          overlay.remove();
+        });
+      }
+    }
+
+    // Dispatch a prompt to the agent, adapting to the current tool
+    function dispatchAgent(projectPath, prompt, opts) {
+      opts = opts || {};
+
+      // Always copy to clipboard as fallback
+      copyCommand(prompt, null);
+
+      // For tools that support spawning (cursor-ide, claude-code)
+      if (canDispatchAgent && projectPath && toolCanSpawn()) {
+        return fetch('/api/dispatch-agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: projectPath,
+            prompt: prompt,
+            repo: opts.repo || undefined,
+            number: opts.number || undefined,
+            taskId: opts.taskId || undefined
+          })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.dispatched) {
+            showToast('Agent dispatched!');
+            return true;
+          } else {
+            showToast('Dispatch failed: ' + (data.error || 'Unknown'));
+            return false;
+          }
+        })
+        .catch(function(err) {
+          console.error('Dispatch failed:', err);
+          showToast('Dispatch error - falling back to clipboard');
+          return false;
+        });
+      }
+
+      // For cursor-ide fallback: copy to clipboard and open Cursor
+      if (toolSettings.tool === 'cursor-ide' || toolSettings.tool === 'cursor-web') {
+        copyCommand(prompt, opts.toastMessage || 'Command copied!');
+        if (projectPath) {
+          var cursorHref = 'cursor://file/' + encodeURI(projectPath).replace(/[#?]/g, encodeURIComponent);
+          window.location.href = cursorHref;
+        }
+        return Promise.resolve(false);
+      }
+
+      // For claude-code: show a terminal command in a modal
+      if (toolSettings.tool === 'claude-code') {
+        var claudeCmd = 'cd ' + (projectPath || '.') + ' && claude -p ' + JSON.stringify(prompt);
+        showPromptModal('Claude Code Command', claudeCmd);
+        return Promise.resolve(false);
+      }
+
+      // For generic: show the raw prompt in a modal
+      showPromptModal('Agent Prompt', prompt);
+      return Promise.resolve(false);
+    }
     
+    function renderPrepWorkTable() {
+      var body = document.getElementById('prep-work-body');
+      if (!body) return;
+      var tasks = Object.values(initiativeTasks);
+      if (tasks.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.8rem;">No prep tasks — click the terminal icon on an initiative to start one</td></tr>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        var icon = initiativeIconHtml(t.initiative);
+        var initLink = t.path
+          ? toolAnchor(t.path, escapeHtml(t.initiative), 'init')
+          : escapeHtml(t.initiative);
+        var initCell = icon ? '<span class="initiative-with-icon">' + icon + initLink + '</span>' : initLink;
+        var cmdText = '<span class="prep-work-task-cmd" title="' + escapeAttr(t.command) + '">' + escapeHtml(t.command.slice(0, 80)) + (t.command.length > 80 ? '…' : '') + '</span>';
+        var bannerIcon = 'clock';
+        var bannerText = 'Pending...';
+        if (t.status === 'running') { bannerIcon = 'loader-2'; bannerText = 'Agent running'; }
+        else if (t.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Done'; }
+        else if (t.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Failed'; }
+        var bannerClass = 'agent-banner agent-banner--' + t.status;
+        var grillSprite = (t.status === 'pending' || t.status === 'running') ? '<span class="chef-grilling"></span> ' : '';
+        var statusLinkHref = toolLink(t.path);
+        var statusHtml = statusLinkHref
+          ? '<a href="' + statusLinkHref + '" class="' + bannerClass + '">' + grillSprite + bannerText + '</a>'
+          : '<div class="' + bannerClass + '">' + grillSprite + bannerText + '</div>';
+        var clearBtn = '<button class="prep-work-clear-btn" data-clear-task="' + escapeAttr(t.id) + '" title="Remove"><i data-lucide="x"></i></button>';
+        html += '<tr class="prep-work-task-row" data-task-id="' + escapeAttr(t.id) + '"><td>' + initCell + '</td><td>' + cmdText + '</td><td class="agent-status-cell">' + statusHtml + '</td><td>' + clearBtn + '</td></tr>';
+      }
+      body.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function loadInitiativeTasks() {
+      fetch('/api/initiative-tasks')
+        .then(function(r) { return r.json(); })
+        .then(function(tasks) {
+          initiativeTasks = {};
+          for (var i = 0; i < tasks.length; i++) {
+            initiativeTasks[tasks[i].id] = tasks[i];
+          }
+          renderPrepWorkTable();
+        })
+        .catch(function() {});
+    }
+
     function getAgentStatusHtml(repo, number, path) {
       var key = repo + '#' + number;
       var job = agentJobs[key];
       if (!job) {
         // No job - still make clickable if path exists
         if (path && path.trim()) {
-          return '<a href="cursor://file/' + escapeUri(path) + '" class="agent-status-link" title="Open in Cursor"><span class="agent-status-empty">—</span></a>';
+          var emptyHref = toolLink(path);
+          if (emptyHref) return '<a href="' + emptyHref + '" class="agent-status-link" title="' + toolOpenTitle() + '"><span class="agent-status-empty">—</span></a>';
+          return '<span class="agent-status-empty">—</span>';
         }
         return '<span class="agent-status-empty">—</span>';
       }
@@ -2978,8 +3653,9 @@
       var statusSpan = '<span class="agent-status ' + statusClass + '" title="' + escapeAttr(title) + '"><i data-lucide="' + icon + '"></i> ' + escapeHtml(text) + '</span>';
       
       // Wrap in link if path exists
-      if (path && path.trim()) {
-        return '<a href="cursor://file/' + escapeUri(path) + '" class="agent-status-link">' + statusSpan + '</a>';
+      var agentHref = toolLink(path);
+      if (agentHref) {
+        return '<a href="' + agentHref + '" class="agent-status-link">' + statusSpan + '</a>';
       }
       return statusSpan;
     }
@@ -3011,22 +3687,20 @@
       var c = pr.checks || {};
       var path = (pr.initiativePath && typeof pr.initiativePath === 'string') ? pr.initiativePath : '';
       var initLabel = (pr.initiativeName && typeof pr.initiativeName === 'string') ? pr.initiativeName : '—';
-      var icon = initiativeIconHtml(initLabel);
       var initCell;
       if (initLabel === '—') {
         // No initiative - show picker dropdown
         initCell = buildInitPickerDropdown(pr);
       } else {
-        var initLink = path
-          ? '<a href="cursor://file/' + escapeUri(path) + '" class="init" title="Open in Cursor">' + escapeHtml(initLabel) + '</a>'
-          : '<span class="check-icon none">' + escapeHtml(initLabel) + '</span>';
-        initCell = icon ? '<span class="initiative-with-icon">' + icon + initLink + '</span>' : initLink;
+        // Initiative name/icon shown in group header, leave PR row cell empty
+        initCell = '';
       }
       var commentsContent = pr.unresolved > 0
         ? '<span class="comments-unresolved">' + pr.unresolved + '</span>'
         : '<span class="check-icon none">0</span>';
-      var commentsHtml = (path && path.trim())
-        ? '<a href="cursor://file/' + escapeUri(path) + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="Open in Cursor">' + commentsContent + '</a>'
+      var commentsHref = toolLink(path);
+      var commentsHtml = commentsHref
+        ? '<a href="' + commentsHref + '" class="comments-link" data-unresolved="' + (pr.unresolved || 0) + '" title="' + toolOpenTitle() + '">' + commentsContent + '</a>'
         : commentsContent;
       var hasIssues = pr.unresolved > 0 || c.lint === 'failure' || c.type === 'failure' || c.test === 'failure' || c.e2e === 'failure' || c.other === 'failure' || hasConflicts(pr);
       // Store issue context as data attributes for the copy command
@@ -3081,7 +3755,13 @@
         if (agentJob.status === 'running') { bannerIcon = 'loader-2'; bannerText = 'Agent running'; }
         else if (agentJob.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Agent done'; }
         else if (agentJob.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Agent failed'; }
-        agentBanner = '<div class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '"><i data-lucide="' + bannerIcon + '"></i> ' + escapeHtml(bannerText) + '</div>';
+        var grillSprite = (agentJob.status === 'pending' || agentJob.status === 'running') ? '<span class="chef-grilling"></span> ' : '';
+        var bannerHref = toolLink(path);
+        if (bannerHref) {
+          agentBanner = '<a href="' + bannerHref + '" class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '">' + grillSprite + escapeHtml(bannerText) + '</a>';
+        } else {
+          agentBanner = '<div class="' + bannerClass + '" data-agent-banner="' + escapeAttr(agentKey) + '">' + grillSprite + escapeHtml(bannerText) + '</div>';
+        }
       }
       return '<td>' + initCell + '</td>' +
         '<td><span class="repo-cell"><span class="platform-icon" style="color: ' + getPlatformIcon(pr.repo).color + ';" title="' + getPlatformIcon(pr.repo).label + '"><i data-lucide="' + getPlatformIcon(pr.repo).icon + '"></i></span>' + escapeHtml(formatRepoName(pr.repo)) + ' ' + prCell + (pr.branch ? ' <code class="branch-name" data-branch="' + escapeAttr(pr.branch) + '" title="Click to copy">' + escapeHtml(pr.branch) + '</code>' : '') + '<br>' + titleDisplay + '</span></td>' +
@@ -3089,8 +3769,7 @@
         '<td class="actions-col">' + actionsCell + '</td>' +
         '<td>' + commentsHtml + '</td>' +
         '<td class="checks-cell" colspan="5">' + checksHtml + '</td>' +
-        '<td>' + previewLinks(pr.previews) + '</td>' +
-        '<td class="back-burner-cell">' + backBurnerBtn + '</td>';
+        '<td>' + previewLinks(pr.previews) + '</td>';
     }
 
     function sortInitiativesByOrder(initiatives) {
@@ -3151,11 +3830,16 @@
           '<img src="' + iconSrc + '" alt="" class="initiative-icon" />' +
           '<button type="button" class="initiative-icon-edit" data-edit-initiative="' + escapeAttr(name) + '" title="Regenerate icon"><i data-lucide="pencil"></i></button>' +
           '</span>';
+        var terminalBtn = '<button type="button" class="initiative-icon-terminal" data-init-cmd="' + escapeAttr(name) + '" data-init-path="' + escapeAttr(path || '') + '" title="Send command to agent"><i data-lucide="terminal"></i></button>';
+        var orderupPrepBtn = '<button type="button" class="initiative-orderup-prep" data-orderup-prep="' + escapeAttr(name) + '" title="Add prep work for Order Up"><img src="/images/orderup.png" alt="Order Up" /></button>';
         var label = escapeHtml(name);
+        var statusBadge = getInitiativeStatusBadge(name);
+        var textBlock = '<span class="init-card-text"><span>' + label + '</span>' + statusBadge + '</span>';
         if (path) {
-          html += '<a href="cursor://file/' + escapeUri(path) + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Open ' + escapeAttr(name) + ' in Cursor">' + iconWithEdit + '<span>' + label + '</span></a>';
+          var cardHref = toolLink(path) || '#';
+          html += '<a href="' + cardHref + '" class="initiative-card" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="' + toolOpenTitle() + ' ' + escapeAttr(name) + '">' + iconWithEdit + textBlock + terminalBtn + orderupPrepBtn + '</a>';
         } else {
-          html += '<a href="#" class="initiative-card initiative-card--nolink" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Create and open ' + escapeAttr(name) + '">' + iconWithEdit + '<span>' + label + '</span></a>';
+          html += '<a href="#" class="initiative-card initiative-card--nolink" draggable="true" data-initiative-name="' + escapeAttr(name) + '" title="Create and open ' + escapeAttr(name) + '">' + iconWithEdit + textBlock + terminalBtn + orderupPrepBtn + '</a>';
         }
       }
       cardsRoot.innerHTML = html;
@@ -3196,7 +3880,52 @@
       }
     }
 
+    // Compute status for each initiative: "grill", "backburner", "prep", "idle"
+    var initiativeStatuses = {}; // { name: "grill" | "backburner" | "prep" | "idle" }
+    function computeInitiativeStatuses(initiatives) {
+      initiativeStatuses = {};
+      var initNames = new Set();
+      // Check PRs
+      for (var i = 0; i < (initiatives || []).length; i++) {
+        var init = initiatives[i];
+        if (!init.name || init.name === '—') continue;
+        var prs = init.prs || [];
+        for (var j = 0; j < prs.length; j++) {
+          var pr = prs[j];
+          var branch = (pr.branch || '').toLowerCase();
+          if (branch === 'main' || branch === 'master') continue;
+          initNames.add(init.name);
+          if (isBackBurner(pr.repo, pr.number)) {
+            if (!initiativeStatuses[init.name] || initiativeStatuses[init.name] === 'idle') {
+              initiativeStatuses[init.name] = 'backburner';
+            }
+          } else {
+            initiativeStatuses[init.name] = 'grill'; // active PR trumps all
+          }
+        }
+      }
+      // Check prep tasks
+      var tasks = Object.values(initiativeTasks);
+      for (var k = 0; k < tasks.length; k++) {
+        var t = tasks[k];
+        if (t.initiative && t.status !== 'complete' && t.status !== 'failed' && t.status !== 'cleared') {
+          if (!initiativeStatuses[t.initiative] || initiativeStatuses[t.initiative] === 'idle') {
+            initiativeStatuses[t.initiative] = 'prep';
+          }
+        }
+      }
+    }
+
+    function getInitiativeStatusBadge(name) {
+      var status = initiativeStatuses[name];
+      if (status === 'grill') return '<span class="init-status-badge init-status--grill">On the Grill</span>';
+      if (status === 'backburner') return '<span class="init-status-badge init-status--backburner">Back Burner</span>';
+      if (status === 'prep') return '<span class="init-status-badge init-status--prep">In Prep</span>';
+      return '<span class="init-status-badge init-status--idle">Idle</span>';
+    }
+
     function render(data, newlyCreatedName) {
+      computeInitiativeStatuses(data.initiatives);
       renderInitiativeCards(data.allInitiatives || [], newlyCreatedName);
       // Populate available initiative names for the picker dropdown
       // Only show initiatives that DON'T have any open PRs
@@ -3237,38 +3966,75 @@
         if (p.storybook) parts.push('<a href="' + escapeUri(p.storybook) + '" class="preview-link" target="_blank" rel="noopener" title="Storybook">Storybook</a>');
         return '<div class="preview-links">' + parts.join('') + '</div>';
       }
-      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Repo / PR</th><th><span class="th-icon" title="Agent Status"><i data-lucide="bot"></i></span></th><th><span class="th-icon" title="Actions"><i data-lucide="zap"></i></span></th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th><th colspan="5" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th><th><span class="th-icon" title="Back burner"><i data-lucide="flame"></i></span></th></tr></thead><tbody>';
-      // Sort initiatives by saved order (same as cards)
+      // --- Separate PRs into active vs back-burnered ---
+      var activePrGroups = [];
+      var backBurnerPrGroups = [];
       var sortedTableInitiatives = sortInitiativesByOrder(data.initiatives);
       for (const init of sortedTableInitiatives) {
-        // Filter out PRs on main/master branch
         var filteredPrs = (init.prs || []).filter(function(pr) {
           var branch = (pr.branch || pr.headRefName || '').toLowerCase();
           return branch !== 'main' && branch !== 'master';
         });
-        var sortedPrs = sortPrsByPlatform(filteredPrs);
-        // Check if all PRs in this initiative are back-burnered
-        var allBackBurnered = filteredPrs.length > 0 && filteredPrs.every(function(pr) {
-          return isBackBurner(pr.repo, pr.number);
-        });
-        if (filteredPrs.length) {
-          var groupLabel = init.name === '—' ? 'No initiative' : escapeHtml(init.name);
-          var groupIcon = initiativeIconHtml(init.name);
-          var groupCell = groupIcon ? '<span class="initiative-with-icon">' + groupIcon + groupLabel + '</span>' : groupLabel;
-          var focusValue = getInitiativeFocus(init.name);
-          var focusInput = init.name !== '—' 
-            ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(init.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
+        var active = filteredPrs.filter(function(pr) { return !isBackBurner(pr.repo, pr.number); });
+        var burnered = filteredPrs.filter(function(pr) { return isBackBurner(pr.repo, pr.number); });
+        if (active.length) activePrGroups.push({ name: init.name, prs: sortPrsByPlatform(active) });
+        if (burnered.length) backBurnerPrGroups.push({ name: init.name, prs: sortPrsByPlatform(burnered) });
+      }
+
+      // Helper to build a PR table section
+      var prTableHeaders = '<thead><tr><th>Initiative</th><th>Repo / PR</th><th><span class="th-icon" title="Agent Status"><i data-lucide="bot"></i></span></th><th><span class="th-icon" title="Actions"><i data-lucide="zap"></i></span></th><th><span class="th-icon" title="Unresolved comments"><i data-lucide="message-square"></i></span></th><th colspan="5" class="checks-header"><div class="checks-header-icons"><span class="th-icon" title="Lint checks"><i data-lucide="sparkles"></i></span><span class="th-icon" title="Type checks"><i data-lucide="file-type"></i></span><span class="th-icon" title="Test results"><i data-lucide="flask-conical"></i></span><span class="th-icon" title="E2E tests"><i data-lucide="monitor-check"></i></span><span class="th-icon" title="Other checks"><i data-lucide="circle-ellipsis"></i></span></div></th><th><span class="th-icon" title="Preview links"><i data-lucide="external-link"></i></span></th></tr></thead>';
+
+      function buildPrGroupRows(groups) {
+        var rows = '';
+        for (var g = 0; g < groups.length; g++) {
+          var grp = groups[g];
+          var groupLabel = grp.name === '—' ? 'No initiative' : escapeHtml(grp.name);
+          var groupIcon = initiativeIconHtml(grp.name);
+          var groupPath = (grp.prs && grp.prs.length > 0 && grp.prs[0].initiativePath) ? grp.prs[0].initiativePath : '';
+          var groupHref = (grp.name !== '—' && groupPath) ? toolLink(groupPath) : null;
+          var groupNameHtml = groupHref
+            ? '<a href="' + groupHref + '" class="init" title="' + toolOpenTitle() + '">' + groupLabel + '</a>'
+            : groupLabel;
+          var groupCell = groupIcon ? '<span class="initiative-with-icon">' + groupIcon + groupNameHtml + '</span>' : groupNameHtml;
+          var focusValue = getInitiativeFocus(grp.name);
+          var focusInput = grp.name !== '—'
+            ? '<input type="text" class="initiative-focus-input" data-initiative="' + escapeHtml(grp.name) + '" placeholder="What\'s the focus?" value="' + escapeHtml(focusValue).replace(/"/g, '&quot;') + '" />'
             : '';
-          var headerClass = 'initiative-group-header' + (allBackBurnered ? ' back-burnered-group' : '');
-          html += '<tr class="' + headerClass + '" data-initiative="' + escapeHtml(init.name) + '"><td colspan="11"><div>' + groupCell + focusInput + '</div></td></tr>';
+          // Build back-burner buttons for all PRs in this group (data attrs hold all repo#numbers)
+          var bbData = '';
+          for (var bp = 0; bp < grp.prs.length; bp++) {
+            bbData += (bp > 0 ? ',' : '') + grp.prs[bp].repo + '#' + grp.prs[bp].number;
+          }
+          var anyOnBB = grp.prs.some(function(pr) { return isBackBurner(pr.repo, pr.number); });
+          var bbBtn = grp.name !== '—' ? '<button type="button" class="back-burner-btn back-burner-group-btn' + (anyOnBB ? ' active' : '') + '" title="' + (anyOnBB ? 'Move back to active' : 'Move to back burner') + '" data-bb-prs="' + escapeAttr(bbData) + '"><i data-lucide="flame"></i></button>' : '';
+          rows += '<tr class="initiative-group-header" data-initiative="' + escapeHtml(grp.name) + '"><td colspan="10"><div>' + groupCell + focusInput + '</div></td><td class="back-burner-cell">' + bbBtn + '</td></tr>';
+          for (var p = 0; p < grp.prs.length; p++) {
+            var pr = grp.prs[p];
+            var conflictsAttr = hasConflicts(pr) ? ' data-has-conflicts="true"' : '';
+            rows += '<tr data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(pr.initiativePath || '') + '"' + conflictsAttr + '>' + buildPrRowCells(pr) + '</tr>';
+          }
         }
-        for (const pr of sortedPrs) {
-          var conflictsAttr = hasConflicts(pr) ? ' data-has-conflicts="true"' : '';
-          var backBurnerClass = isBackBurner(pr.repo, pr.number) ? ' back-burnered' : '';
-          html += '<tr class="' + backBurnerClass.trim() + '" data-repo="' + escapeAttr(pr.repo) + '" data-number="' + pr.number + '" data-path="' + escapeAttr(pr.initiativePath || '') + '"' + conflictsAttr + '>' + buildPrRowCells(pr) + '</tr>';
-        }
+        return rows;
+      }
+
+      // --- Section 1: Orders on the Grill (active PRs) ---
+      let html = '<div class="card"><div class="card-header">Orders on the Grill</div><div class="table-wrap"><table>' + prTableHeaders + '<tbody>';
+      html += buildPrGroupRows(activePrGroups);
+      if (activePrGroups.length === 0) {
+        html += '<tr><td colspan="11" style="text-align:center; padding:2rem; color:var(--text-muted);">No active PRs — all clear!</td></tr>';
       }
       html += '</tbody></table></div></div>';
+
+      // --- Section 2: Prep Work (non-PR initiative tasks) ---
+      html += '<div class="card" id="prep-work-card" style="margin-top: var(--space);"><div class="card-header">Prep Work</div><div class="table-wrap"><table><thead><tr><th>Initiative</th><th>Task</th><th><span class="th-icon" title="Agent Status"><i data-lucide="bot"></i></span></th><th></th></tr></thead><tbody id="prep-work-body">';
+      html += '</tbody></table></div></div>';
+
+      // --- Section 3: Back Burner (draft PRs) ---
+      if (backBurnerPrGroups.length > 0) {
+        html += '<div class="card back-burner-section" style="margin-top: var(--space);"><div class="card-header">Back Burner</div><div class="table-wrap"><table>' + prTableHeaders + '<tbody>';
+        html += buildPrGroupRows(backBurnerPrGroups);
+        html += '</tbody></table></div></div>';
+      }
       root.innerHTML = html;
       if (typeof lucide !== 'undefined') lucide.createIcons();
       }
@@ -3276,6 +4042,7 @@
       updateUnassignedDropdown(data.initiatives);
       renderLocal(data.localBranches);
       loadEvents();
+      loadInitiativeTasks();
     }
 
     function updateUnassignedDropdown(initiatives) {
@@ -3337,8 +4104,9 @@
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         var initPath = (r.path || '').trim();
-        var initLink = initPath
-          ? '<a href="cursor://file/' + escapeUri(initPath) + '" class="init" title="Open in Cursor">' + escapeHtml(r.initiative) + '</a>'
+        var branchHref = initPath ? toolLink(initPath) : null;
+        var initLink = branchHref
+          ? '<a href="' + branchHref + '" class="init" title="' + toolOpenTitle() + '">' + escapeHtml(r.initiative) + '</a>'
           : escapeHtml(r.initiative);
         var initIcon = initiativeIconHtml(r.initiative);
         var initCellLocal = initIcon ? '<span class="initiative-with-icon">' + initIcon + initLink + '</span>' : initLink;
@@ -3368,25 +4136,45 @@
       return encodeURI(s || '').replace(/[#?]/g, encodeURIComponent);
     }
 
-    var CHEF_RUN_JUMP_FRAMES_KEY = 'prWatcher_chefRunJumpFrames';
-    var DEFAULT_FRAME_COORDS = {
-      imageWidth: 2200,
-      imageHeight: 600,
-      frames: [
-        { x: 4, y: 0, w: 550, h: 600 },
-        { x: 575, y: 0, w: 550, h: 600 },
-        { x: 1160, y: 0, w: 550, h: 600 },
-        { x: 1695, y: 0, w: 550, h: 600 }
-      ]
+    // Sprite sheet configs for chef animations
+    // Defaults can be overridden by the sprite editor (saved in localStorage)
+    var SPRITE_DEFAULTS = {
+      running: { url: '/images/sprite-running.png', sheetW: 772, sheetH: 1024, cols: 6, rows: 6, totalFrames: 36, fps: 15 },
+      jumping: { url: '/images/sprite-jumping.png', sheetW: 686, sheetH: 1024, cols: 6, rows: 6, totalFrames: 36, fps: 15 },
+      grilling: { url: '/images/sprite-grilling.png', sheetW: 945, sheetH: 1024, cols: 6, rows: 6, totalFrames: 36, fps: 15 }
     };
-    function getFrameCoords() {
+
+    function loadSpriteConfig(name) {
+      // Try loading pre-computed frames from sprite editor
       try {
-        var raw = localStorage.getItem(CHEF_RUN_JUMP_FRAMES_KEY);
-        if (!raw) return null;
-        var data = JSON.parse(raw);
-        if (!data || !Array.isArray(data.frames) || data.frames.length < 4) return null;
-        return data;
-      } catch (e) { return null; }
+        var saved = localStorage.getItem('orderup_sprite_' + name + '_frames');
+        if (saved) {
+          var data = JSON.parse(saved);
+          if (data && data.frames && data.frames.length > 0) return data;
+        }
+      } catch(e) {}
+      return SPRITE_DEFAULTS[name];
+    }
+
+    var SPRITE_RUNNING = loadSpriteConfig('running');
+    var SPRITE_JUMPING = loadSpriteConfig('jumping');
+    var SPRITE_GRILLING = loadSpriteConfig('grilling');
+
+    // Get frame from pre-computed array or calculate from grid
+    function getSpriteFrame(sprite, frameIndex) {
+      var fi = frameIndex % (sprite.totalFrames || 42);
+      // If we have pre-computed frames from the sprite editor, use those
+      if (sprite.frames && sprite.frames[fi]) {
+        return sprite.frames[fi];
+      }
+      // Fallback: calculate from grid
+      var cols = sprite.cols || 6;
+      var rows = sprite.rows || 7;
+      var col = fi % cols;
+      var row = Math.floor(fi / cols);
+      var w = Math.round(sprite.sheetW / cols);
+      var h = Math.round(sprite.sheetH / rows);
+      return { x: col * w, y: row * h, w: w, h: h };
     }
     function saveFrameCoords(data) {
       try {
@@ -3585,20 +4373,36 @@
           loadingGameState.chefY = 0;
           loadingGameState.chefVy = 0;
         }
-        c.style.transform = 'translateY(' + (-loadingGameState.chefY) + 'px)';
-        var runCycle = Math.floor(now / 100) % 2;
-        var frameIndex = loadingGameState.chefY > 0 ? (runCycle === 0 ? 1 : 2) : (runCycle === 0 ? 0 : 3);
-        var coords = getFrameCoords();
-        if (!coords || !coords.frames || !coords.frames[frameIndex]) coords = DEFAULT_FRAME_COORDS;
-        var f = coords.frames[frameIndex];
-        if (f) {
-          var scale = displayHeight / f.h;
-          c.style.width = Math.round(f.w * scale) + 'px';
-          c.style.height = Math.round(f.h * scale) + 'px';
-          c.style.backgroundSize = (coords.imageWidth * scale) + 'px ' + (coords.imageHeight * scale) + 'px';
-          c.style.backgroundPosition = (-f.x * scale) + 'px ' + (-f.y * scale) + 'px';
-          c.style.filter = 'none';
+        // Select sprite sheet and frame based on state
+        var isJumping = loadingGameState.chefY > 0;
+        c.style.transform = isJumping
+          ? 'scale(1.6, 1.6) translateY(' + (-loadingGameState.chefY) + 'px)'
+          : 'scale(-1.4, 1.4) translateY(' + (-loadingGameState.chefY) + 'px)';
+        var sprite = isJumping ? SPRITE_JUMPING : SPRITE_RUNNING;
+        
+        // Animate through all 42 frames at ~15fps
+        if (!loadingGameState.animFrame) loadingGameState.animFrame = 0;
+        if (!loadingGameState.lastAnimTime) loadingGameState.lastAnimTime = 0;
+        var animInterval = 67; // ~15fps
+        if (now - loadingGameState.lastAnimTime > animInterval) {
+          loadingGameState.animFrame = (loadingGameState.animFrame + 1) % sprite.totalFrames;
+          loadingGameState.lastAnimTime = now;
         }
+        
+        // Reset frame counter when switching between run/jump
+        if (loadingGameState.wasJumping !== isJumping) {
+          loadingGameState.animFrame = 0;
+          loadingGameState.wasJumping = isJumping;
+        }
+        
+        var f = getSpriteFrame(sprite, loadingGameState.animFrame);
+        var scale = displayHeight / f.h;
+        c.style.width = Math.round(f.w * scale) + 'px';
+        c.style.height = Math.round(f.h * scale) + 'px';
+        c.style.backgroundImage = 'url(' + sprite.url + ')';
+        c.style.backgroundSize = Math.round(sprite.sheetW * scale) + 'px ' + Math.round(sprite.sheetH * scale) + 'px';
+        c.style.backgroundPosition = Math.round(-f.x * scale) + 'px ' + Math.round(-f.y * scale) + 'px';
+        c.style.filter = 'none';
         // Check for jumping over food (score points) or collision (death)
         for (var i = 0; i < foods.length; i++) {
           var fr = foods[i].getBoundingClientRect();
@@ -3635,7 +4439,7 @@
           if (!document.querySelector('.loading-stage__chef')) return;
           if (loadingGameState.state !== 'playing') return;
           e.preventDefault();
-          if (loadingGameState.chefY === 0) loadingGameState.chefVy = 10;
+          if (loadingGameState.chefY === 0) loadingGameState.chefVy = 11;
         });
       }
       requestAnimationFrame(loop);
@@ -3697,8 +4501,15 @@
       else if (job.status === 'complete') { bannerIcon = 'check-circle'; bannerText = 'Agent done'; }
       else if (job.status === 'failed') { bannerIcon = 'alert-circle'; bannerText = 'Agent failed'; }
       var bannerClass = 'agent-banner agent-banner--' + job.status;
+      var grillSprite = (job.status === 'pending' || job.status === 'running') ? '<span class="chef-grilling"></span> ' : '';
 
-      statusCell.innerHTML = '<div class="' + bannerClass + '"><i data-lucide="' + bannerIcon + '"></i> ' + bannerText + '</div>';
+      var rowPath = row.getAttribute('data-path') || '';
+      var sseHref = toolLink(rowPath);
+      if (sseHref) {
+        statusCell.innerHTML = '<a href="' + sseHref + '" class="' + bannerClass + '">' + grillSprite + bannerText + '</a>';
+      } else {
+        statusCell.innerHTML = '<div class="' + bannerClass + '">' + grillSprite + bannerText + '</div>';
+      }
       if (typeof lucide !== 'undefined') lucide.createIcons();
 
       // Auto-remove "complete" banner after 10 seconds
@@ -4295,6 +5106,72 @@
         return;
       }
 
+      // Handle initiative terminal button - opens cmd modal for non-PR tasks
+      var initTermBtn = e.target && e.target.closest ? e.target.closest('.initiative-icon-terminal') : null;
+      if (initTermBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var initName = initTermBtn.getAttribute('data-init-cmd') || '';
+        var initPath = initTermBtn.getAttribute('data-init-path') || '';
+        if (initName) openInitiativeCmdModal(initName, initPath);
+        return;
+      }
+
+      // Handle order-up prep work button - creates prep work for order-up app
+      var orderupPrepBtn = e.target && e.target.closest ? e.target.closest('.initiative-orderup-prep') : null;
+      if (orderupPrepBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var prepInitiative = orderupPrepBtn.getAttribute('data-orderup-prep') || '';
+        if (prepInitiative) openInitiativeCmdModal('order-up', '/Users/brandonevery/Projects/order-up');
+        return;
+      }
+
+      // Handle prep work agent banner click - copy status update command
+      var prepBanner = e.target && e.target.closest ? e.target.closest('.prep-work-task-row .agent-banner') : null;
+      if (prepBanner) {
+        var taskRow = prepBanner.closest('.prep-work-task-row');
+        if (taskRow) {
+          e.preventDefault();
+          e.stopPropagation();
+          var taskId = taskRow.getAttribute('data-task-id');
+          var task = taskId ? initiativeTasks[taskId] : null;
+          if (task) {
+            var cmd = (task.command || 'Complete the task') + '\n\n';
+            cmd += '**IMPORTANT**: Report your status to Order Up dashboard so the user can track progress.\n\n';
+            cmd += 'On Start (run immediately):\n';
+            cmd += '```bash\n';
+            cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + task.id + '","status":"running"}\'\n';
+            cmd += '```\n\n';
+            cmd += 'On Complete (run after finishing):\n';
+            cmd += '```bash\n';
+            cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + task.id + '","status":"complete","summary":"Done"}\'\n';
+            cmd += '```\n\n';
+            cmd += 'On Failure (if you cannot complete):\n';
+            cmd += '```bash\n';
+            cmd += 'curl -X POST http://localhost:3333/api/initiative-task -H "Content-Type: application/json" -d \'{"id":"' + task.id + '","status":"failed","error":"Brief description"}\'\n';
+            cmd += '```\n';
+            
+            dispatchAgent(task.path, cmd, { taskId: task.id, toastMessage: 'Task command sent!' });
+          }
+        }
+        return;
+      }
+
+      // Handle prep work clear button
+      var clearTaskBtn = e.target && e.target.closest ? e.target.closest('.prep-work-clear-btn') : null;
+      if (clearTaskBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var taskId = clearTaskBtn.getAttribute('data-clear-task');
+        if (taskId) {
+          delete initiativeTasks[taskId];
+          fetch('/api/initiative-task/' + encodeURIComponent(taskId), { method: 'DELETE' }).catch(function() {});
+          renderPrepWorkTable();
+        }
+        return;
+      }
+
       // Handle initiative icon edit button
       var editBtn = e.target && e.target.closest ? e.target.closest('.initiative-icon-edit') : null;
       if (editBtn) {
@@ -4424,7 +5301,8 @@
             })
             .then(function(result) {
               if (result.ok && result.data && result.data.path) {
-                window.location.href = 'cursor://file/' + result.data.path;
+                var ensureHref = toolLink(result.data.path);
+                if (ensureHref) window.location.href = ensureHref;
               } else {
                 initiativeCard.style.pointerEvents = '';
                 initiativeCard.removeAttribute('aria-busy');
@@ -4593,9 +5471,9 @@
             cmd += '**TIP**: If you make a mistake, `git rebase --abort` will start over.';
           }
           
-          // Copy and show feedback
+          // Dispatch and show feedback
           incrementStat('bugs');
-          copyCommand(cmd, 'All issues command copied!');
+          dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'All issues command sent!' });
           finishBtn.innerHTML = '<i data-lucide="check"></i>';
           if (typeof lucide !== 'undefined') lucide.createIcons();
           finishBtn.disabled = false;
@@ -4603,11 +5481,6 @@
             finishBtn.innerHTML = '<i data-lucide="bug"></i>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
           }, 1500);
-          
-          // Open in Cursor if path available
-          if (path && path.trim()) {
-            window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
-          }
         });
         return;
       }
@@ -4776,6 +5649,48 @@
             mergeBtn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
           }, 2000);
+        });
+        return;
+      }
+      // Group Back Burner button handler - toggles all PRs in an initiative
+      var bbGroupBtn = e.target && e.target.closest ? e.target.closest('button.back-burner-group-btn') : null;
+      if (bbGroupBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var prList = (bbGroupBtn.getAttribute('data-bb-prs') || '').split(',').filter(Boolean);
+        if (prList.length === 0) return;
+        // Determine direction: if any are NOT back-burnered, move all to back burner
+        var moveToBB = prList.some(function(key) {
+          var parts = key.split('#');
+          return !isBackBurner(parts[0], parseInt(parts[1], 10));
+        });
+        bbGroupBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        // Toggle all PRs
+        var promises = [];
+        for (var i = 0; i < prList.length; i++) {
+          var parts = prList[i].split('#');
+          var repo = parts[0], num = parseInt(parts[1], 10);
+          var currentlyBB = isBackBurner(repo, num);
+          if (moveToBB !== currentlyBB) {
+            toggleBackBurner(repo, num);
+            promises.push(
+              fetch('/api/toggle-draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repo: repo, number: num, makeDraft: moveToBB })
+              }).then(function(r) { return r.json(); }).catch(function() { return {}; })
+            );
+          }
+        }
+        Promise.all(promises).then(function() {
+          bbGroupBtn.innerHTML = '<i data-lucide="flame"></i>';
+          bbGroupBtn.classList.toggle('active', moveToBB);
+          bbGroupBtn.title = moveToBB ? 'Move back to active' : 'Move to back burner';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          // Reload to re-sort into correct sections
+          load();
         });
         return;
       }
@@ -4974,32 +5889,11 @@
                 }
               }
               var cmd = buildCopyText(repo, num, 'checks', { check: check }) + failureText;
-              copyCommand(cmd, 'Checks command copied!');
-              
-              // Trigger fix agent
-              var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
-              if (path && path.trim()) body.path = path.trim();
-              fetch('/api/fix-check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                keepalive: true
-              }).catch(function() {});
-              
-              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Checks command sent!' });
             })
             .catch(function() {
-              // Fallback to just the command without failure details
-              copyCommand(buildCopyText(repo, num, 'checks', { check: check }), 'Checks command copied!');
-              var body = { repo: repo, number: parseInt(num, 10), check: check || undefined };
-              if (path && path.trim()) body.path = path.trim();
-              fetch('/api/fix-check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                keepalive: true
-              }).catch(function() {});
-              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+              var cmd = buildCopyText(repo, num, 'checks', { check: check });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Checks command sent!' });
             });
         }
         return;
@@ -5033,13 +5927,11 @@
                 }
               }
               var cmd = buildCopyText(repo, num, 'comments', { unresolved: unresolved }) + commentText;
-              copyCommand(cmd, 'Comments command copied!');
-              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Comments command sent!' });
             })
             .catch(function() {
-              // Fallback to just the command without comment details
-              copyCommand(buildCopyText(repo, num, 'comments', { unresolved: unresolved }), 'Comments command copied!');
-              if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+              var cmd = buildCopyText(repo, num, 'comments', { unresolved: unresolved });
+              dispatchAgent(path, cmd, { repo: repo, number: parseInt(num, 10), toastMessage: 'Comments command sent!' });
             });
         }
         return;
@@ -5071,8 +5963,7 @@
         }
         incrementStat('conflicts');
         
-        copyCommand(buildRebaseCommand(repo, num, branch), 'Rebase instructions copied!');
-        if (path && path.trim()) window.location.href = 'cursor://file/' + encodeURI(path).replace(/[#?]/g, encodeURIComponent);
+        dispatchAgent(path, buildRebaseCommand(repo, num, branch), { repo: repo, number: parseInt(num, 10), toastMessage: 'Rebase command sent!' });
         return;
       }
     });
@@ -5488,6 +6379,9 @@
         } else {
           console.log('[SSE Agent Status] Updating job in state:', job.id);
           agentJobs[job.id] = job;
+          if (typeof logStatusChange === 'function') logStatusChange(job);
+          if (job.status === 'complete' || job.status === 'failed') {
+          }
         }
         
         // Find and update the row in the table
@@ -5515,6 +6409,35 @@
         }
       });
       
+      // Initiative task updates
+      sseConnection.addEventListener('initiative-task', function(e) {
+        var task = JSON.parse(e.data);
+        console.log('[SSE Initiative Task] Received:', task.id, task.status);
+        if (task.status === 'cleared') {
+          delete initiativeTasks[task.id];
+        } else {
+          initiativeTasks[task.id] = task;
+          if (task.status === 'complete' || task.status === 'failed') {
+          }
+        }
+        renderPrepWorkTable();
+        
+        // Show toast for status changes
+        if (task.status === 'complete') {
+          showToast('Task done: ' + (task.initiative || task.id));
+        } else if (task.status === 'failed') {
+          showToast('Task failed: ' + (task.initiative || task.id));
+        } else if (task.status === 'running') {
+          showToast('Agent started: ' + (task.initiative || task.id));
+        }
+      });
+
+      // Agent log streaming
+      sseConnection.addEventListener('agent-log', function(e) {
+        var data = JSON.parse(e.data);
+        appendAgentLog(data);
+      });
+
       sseConnection.addEventListener('ping', function(e) {
         // Keep-alive ping, no action needed
       });
@@ -5527,6 +6450,54 @@
       };
     }
     
+    // Agent Log Panel
+    var logPanel = document.getElementById('agent-log-panel');
+    var logBody = document.getElementById('agent-log-body');
+    var logToggle = document.getElementById('agent-log-toggle');
+    var logPanelOpen = false;
+
+    document.getElementById('agent-log-toggle').addEventListener('click', function() {
+      logPanelOpen = !logPanelOpen;
+      logPanel.classList.toggle('open', logPanelOpen);
+      logToggle.classList.remove('has-activity');
+    });
+    document.getElementById('agent-log-close').addEventListener('click', function() {
+      logPanelOpen = false;
+      logPanel.classList.remove('open');
+    });
+    document.getElementById('agent-log-clear').addEventListener('click', function() {
+      logBody.innerHTML = '';
+    });
+
+    function appendLog(html) {
+      logBody.insertAdjacentHTML('beforeend', html);
+      logBody.scrollTop = logBody.scrollHeight;
+      if (!logPanelOpen) {
+        logToggle.classList.add('has-activity');
+      }
+    }
+
+    function appendAgentLog(data) {
+      var cls = 'agent-log-entry agent-log-entry--' + (data.stream || 'stdout');
+      var text = (data.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (data.done) {
+        var exitCls = data.text && data.text.includes('code 0') ? '' : ' failed';
+        appendLog('<div class="agent-log-entry agent-log-entry--status' + exitCls + '">' + text + '</div><hr class="agent-log-divider">');
+      } else {
+        appendLog('<div class="' + cls + '">' + text + '</div>');
+      }
+    }
+
+    // Also log dispatch and status changes
+    function logStatusChange(job) {
+      var label = job.repo ? job.repo + '#' + job.number : job.id || 'task';
+      var text = label + ' → ' + job.status;
+      if (job.summary) text += ': ' + job.summary;
+      if (job.error) text += ' (' + job.error + ')';
+      var cls = (job.status === 'failed') ? ' failed' : '';
+      appendLog('<div class="agent-log-entry agent-log-entry--status' + cls + '">' + text.replace(/</g, '&lt;') + '</div>');
+    }
+
     // Start SSE connection
     connectSSE();
   </script>
