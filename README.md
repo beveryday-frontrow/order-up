@@ -11,6 +11,7 @@ A fun, food-themed PR monitoring dashboard that helps you track and manage pull 
 - **Drag-and-drop reordering** -- Prioritize initiatives your way
 - **Auto-generated pixel art icons** -- Creates retro Burger Time-style icons via Gemini Imagen
 - **MCP server** -- Integrates with any MCP-compatible AI tool
+- **React Native mobile app** -- Monitor PRs and trigger fix actions from your phone
 
 ---
 
@@ -29,6 +30,20 @@ npm run dev
 ```
 
 Then open **http://localhost:3333** in your browser and select your tool from the dropdown in the header.
+
+### Mobile app (React Native / Expo)
+
+```bash
+# 1. Start the Order Up backend (required)
+cd app && npm run dev
+
+# 2. In a second terminal, run the mobile app
+cd mobile && npm install && npm run start
+```
+
+Open the Expo QR code in Expo Go.
+
+For a physical phone, set the mobile app server URL to your computer LAN IP (for example `http://192.168.1.25:3333`) instead of `localhost`.
 
 ---
 
@@ -283,6 +298,9 @@ order-up/
 │   ├── server.ts               # Main backend (port 3333)
 │   ├── public/index.html       # Dashboard frontend
 │   └── electron-main.cjs       # Electron desktop wrapper
+├── mobile/                     # React Native (Expo) mobile client
+│   ├── App.tsx                 # Native dashboard UI
+│   └── README.md               # Mobile setup instructions
 ├── config/
 │   ├── tracking.json           # Initiative/PR tracking config
 │   └── settings.json           # Tool preference
